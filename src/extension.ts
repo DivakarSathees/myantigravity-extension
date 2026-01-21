@@ -67,36 +67,45 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function showDiffInEditor(changeData: any) {
     try {
-        const { change_id, file_path, diff, is_new_file, preview } = changeData;
+        const { change_id, file_path, diff, is_new_file, preview, new_content, old_content } = changeData;
         
         // Store change data
         pendingChanges.set(change_id, changeData);
 
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage('No workspace folder open');
-            return;
-        }
-
-        const filePath = vscode.Uri.file(file_path.startsWith('/') ? file_path : `${workspaceFolder.uri.fsPath}/${file_path}`);
+        console.log('Opening diff for:', file_path);
+        console.log('Is new file:', is_new_file);
+        console.log('Has new_content:', !!new_content);
+        console.log('Has old_content:', !!old_content);
+        
+        // Detect language from file extension
+        const getLanguage = (path: string) => {
+            if (path.endsWith('.py')) return 'python';
+            if (path.endsWith('.js')) return 'javascript';
+            if (path.endsWith('.ts')) return 'typescript';
+            if (path.endsWith('.tsx')) return 'typescriptreact';
+            if (path.endsWith('.jsx')) return 'javascriptreact';
+            if (path.endsWith('.json')) return 'json';
+            if (path.endsWith('.html')) return 'html';
+            if (path.endsWith('.css')) return 'css';
+            if (path.endsWith('.md')) return 'markdown';
+            return 'plaintext';
+        };
         
         if (is_new_file) {
-            // For new files, show the content in a new editor
+            // For new files, show the content in a new untitled document
             const doc = await vscode.workspace.openTextDocument({
-                content: preview || '',
-                language: file_path.endsWith('.py') ? 'python' : 
-                         file_path.endsWith('.js') ? 'javascript' :
-                         file_path.endsWith('.ts') ? 'typescript' : 'plaintext'
+                content: new_content || preview || '',
+                language: getLanguage(file_path)
             });
+            
             currentDiffEditor = await vscode.window.showTextDocument(doc, {
-                preview: true,
+                preview: false,
                 viewColumn: vscode.ViewColumn.One
             });
             
             // Show info message with buttons
             const result = await vscode.window.showInformationMessage(
                 `📝 New file proposed: ${file_path}`,
-                { modal: true },
                 'Accept',
                 'Reject'
             );
@@ -107,40 +116,32 @@ async function showDiffInEditor(changeData: any) {
                 await vscode.commands.executeCommand('antigravity.rejectChange', change_id);
             }
         } else {
-            // For existing files, show diff
-            // Get original content from server
-            const response = await fetch(`http://localhost:8000/get-file-content?path=${encodeURIComponent(file_path)}`);
-            const data: any = await response.json();
-            const originalContent = data.content || '';
-            const newContent = changeData.new_content || '';
-
-            // Create temporary files for diff
-            const originalUri = vscode.Uri.parse(`untitled:${file_path}.original`);
-            const modifiedUri = vscode.Uri.parse(`untitled:${file_path}.modified`);
-
-            // Write content to workspace
-            await vscode.workspace.fs.writeFile(
-                originalUri,
-                Buffer.from(originalContent)
-            );
-            await vscode.workspace.fs.writeFile(
-                modifiedUri,
-                Buffer.from(newContent)
-            );
+            // For existing files, show diff using untitled documents
+            const originalContent = old_content || '';
+            const modifiedContent = new_content || '';
+            
+            // Create untitled documents for comparison
+            const originalDoc = await vscode.workspace.openTextDocument({
+                content: originalContent,
+                language: getLanguage(file_path)
+            });
+            
+            const modifiedDoc = await vscode.workspace.openTextDocument({
+                content: modifiedContent,
+                language: getLanguage(file_path)
+            });
 
             // Open diff editor
             await vscode.commands.executeCommand(
                 'vscode.diff',
-                originalUri,
-                modifiedUri,
-                `${file_path} (Changes)`,
-                { preview: false }
+                originalDoc.uri,
+                modifiedDoc.uri,
+                `${file_path} (Proposed Changes)`
             );
 
             // Show action buttons
             const result = await vscode.window.showInformationMessage(
-                `📝 File changes proposed for: ${file_path}`,
-                { modal: true },
+                `📝 Review changes to: ${file_path}`,
                 'Accept',
                 'Reject'
             );
@@ -168,6 +169,33 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     public resolveWebviewView(webviewView: vscode.WebviewView) {
         webviewView.webview.options = { enableScripts: true };
         const provider = this;
+
+        // Handle messages from the webview
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            if (message.type === 'viewDiff') {
+                // Fetch the change data and open diff
+                try {
+                    const response = await fetch(`http://localhost:8000/get-pending-change/${message.changeId}`);
+                    const data: any = await response.json();
+                    
+                    if (data.ok) {
+                        await showDiffInEditor({
+                            change_id: message.changeId,
+                            file_path: message.filePath,
+                            diff: data.change.diff,
+                            is_new_file: data.change.is_new_file,
+                            preview: data.change.new_content,
+                            new_content: data.change.new_content,
+                            old_content: data.change.old_content
+                        });
+                    } else {
+                        vscode.window.showErrorMessage('Failed to load file change');
+                    }
+                } catch (error: any) {
+                    vscode.window.showErrorMessage('Error viewing diff: ' + error.message);
+                }
+            }
+        });
 
         // The HTML for your sidebar with separate chat and terminal views
         webviewView.webview.html = `
@@ -305,12 +333,66 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 }
                 .file-diff-box {
                     background-color: var(--vscode-editor-background);
-                    border: 2px solid var(--vscode-terminal-ansiBrightCyan);
-                    padding: 12px;
-                    margin: 10px 0;
+                    border: 1px solid var(--vscode-terminal-ansiBrightCyan);
+                    padding: 8px 12px;
+                    margin: 8px 0;
                     border-radius: 4px;
-                    max-height: 400px;
-                    overflow-y: auto;
+                }
+                .diff-compact {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                .diff-compact-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex: 1;
+                }
+                .diff-icon {
+                    font-size: 16px;
+                }
+                .diff-file-name {
+                    color: var(--vscode-terminal-ansiBrightYellow);
+                    font-family: monospace;
+                    font-weight: bold;
+                    flex: 1;
+                }
+                .diff-badge {
+                    font-size: 11px;
+                    padding: 2px 8px;
+                    border-radius: 3px;
+                    background-color: var(--vscode-badge-background);
+                    color: var(--vscode-badge-foreground);
+                }
+                .diff-compact-actions {
+                    display: flex;
+                    gap: 8px;
+                    justify-content: flex-end;
+                }
+                .diff-btn-compact {
+                    padding: 4px 12px;
+                    border: none;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 500;
+                    transition: opacity 0.2s;
+                }
+                .diff-btn-compact:hover {
+                    opacity: 0.8;
+                }
+                .diff-btn-view {
+                    background-color: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                }
+                .diff-btn-accept {
+                    background-color: var(--vscode-testing-iconPassed);
+                    color: #fff;
+                }
+                .diff-btn-reject {
+                    background-color: var(--vscode-testing-iconFailed);
+                    color: #fff;
                 }
                 .diff-header {
                     color: var(--vscode-terminal-ansiBrightCyan);
@@ -700,60 +782,47 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     function showFileDiff(changeId, filePath, diff, isNewFile, preview) {
         console.log('🎨 showFileDiff called with:', {changeId, filePath, isNewFile});
         
-        // Remove any existing diff boxes
-        const existing = terminalContainer.querySelectorAll('.file-diff-box');
-        console.log('🗑️ Removing', existing.length, 'existing diff boxes');
-        existing.forEach(box => box.remove());
+        // Check if this change ID already exists
+        const selector = '[data-change-id="' + changeId + '"]';
+        const existingForThisChange = terminalContainer.querySelector(selector);
+        if (existingForThisChange) {
+            console.log('⚠️ Diff already displayed for change:', changeId);
+            return;
+        }
 
-        console.log('📦 Creating new diff box...');
+        console.log('📦 Creating compact diff notification...');
         const diffBox = document.createElement('div');
         diffBox.className = 'file-diff-box';
+        diffBox.setAttribute('data-change-id', changeId);
         
-        const badge = isNewFile ? '<span style="color: #00ff00;">NEW FILE</span>' : '<span style="color: #ffa500;">EDIT</span>';
+        const badge = isNewFile ? '<span style="color: #00ff00;">●</span> NEW FILE' : '<span style="color: #ffa500;">●</span> EDIT';
         
-        let diffHtml = '';
-        if (isNewFile && preview) {
-            diffHtml = \`<div class="diff-content">\${escapeHtml(preview)}</div>\`;
-        } else {
-            // Format diff with colors
-            const diffLines = diff.split('\\n');
-            diffHtml = '<div class="diff-content">';
-            for (const line of diffLines) {
-                if (line.startsWith('+') && !line.startsWith('+++')) {
-                    diffHtml += \`<div class="diff-line-add">\${escapeHtml(line)}</div>\`;
-                } else if (line.startsWith('-') && !line.startsWith('---')) {
-                    diffHtml += \`<div class="diff-line-remove">\${escapeHtml(line)}</div>\`;
-                } else if (line.startsWith('@@')) {
-                    diffHtml += \`<div style="color: #00bfff;">\${escapeHtml(line)}</div>\`;
-                } else {
-                    diffHtml += \`<div class="diff-line-context">\${escapeHtml(line)}</div>\`;
-                }
-            }
-            diffHtml += '</div>';
-        }
-        
+        // Compact view - just show file name and action buttons
         diffBox.innerHTML = \`
-            <div class="diff-header">
-                <div>
-                    <span>📝 File Change Request</span> \${badge}
+            <div class="diff-compact">
+                <div class="diff-compact-header">
+                    <span class="diff-icon">📝</span>
+                    <span class="diff-file-name">\${filePath}</span>
+                    <span class="diff-badge">\${badge}</span>
                 </div>
-            </div>
-            <div class="diff-file-path">\${filePath}</div>
-            \${diffHtml}
-            <div class="diff-buttons">
-                <button class="diff-btn diff-btn-accept" onclick="handleFileDiff('\${changeId}', true)">
-                    ✓ Accept Changes
-                </button>
-                <button class="diff-btn diff-btn-reject" onclick="handleFileDiff('\${changeId}', false)">
-                    ✗ Reject Changes
-                </button>
+                <div class="diff-compact-actions">
+                    <button class="diff-btn-compact diff-btn-view" onclick="viewDiffInEditor('\${changeId}', '\${filePath}')">
+                        👁️ View Diff
+                    </button>
+                    <button class="diff-btn-compact diff-btn-accept" onclick="handleFileDiff('\${changeId}', true)">
+                        ✓ Accept
+                    </button>
+                    <button class="diff-btn-compact diff-btn-reject" onclick="handleFileDiff('\${changeId}', false)">
+                        ✗ Reject
+                    </button>
+                </div>
             </div>
         \`;
         
-        console.log('➕ Appending diff box to terminal container');
+        console.log('➕ Appending compact diff notification to terminal');
         terminalContainer.appendChild(diffBox);
         terminalContainer.scrollTop = terminalContainer.scrollHeight;
-        console.log('✅ Diff box added and scrolled into view');
+        console.log('✅ Compact diff notification added');
     }
 
     function escapeHtml(text) {
@@ -762,10 +831,29 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         return div.innerHTML;
     }
 
+    // Store file change data for viewing in editor
+    window.fileChanges = window.fileChanges || {};
+    
+    window.viewDiffInEditor = function(changeId, filePath) {
+        console.log('👁️ Opening diff in editor for:', filePath);
+        
+        // Send message to VS Code extension to open diff
+        vscode.postMessage({
+            type: 'viewDiff',
+            changeId: changeId,
+            filePath: filePath
+        });
+        
+        addTerminalOutput('📄 Opening diff in editor: ' + filePath, 'output');
+    };
+
     window.handleFileDiff = async function(changeId, approved) {
-        const diffBox = terminalContainer.querySelector('.file-diff-box');
+        // Remove only THIS specific diff box
+        const selector = '[data-change-id="' + changeId + '"]';
+        const diffBox = terminalContainer.querySelector(selector);
         if (diffBox) {
             diffBox.remove();
+            console.log('🗑️ Removed diff box for change:', changeId);
         }
 
         try {
