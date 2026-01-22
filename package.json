@@ -2,8 +2,8 @@
   "name": "myantigravity",
   "displayName": "MyAntigravity",
   "description": "Agentic IDE powered by Gemini",
+  "icon": "media/icon.svg",
   "version": "0.0.1",
-  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -27,8 +27,7 @@
         {
           "type": "webview",
           "id": "antigravity.chatView",
-          "name": "Agent Manager",
-          "icon": "media/icon.png"
+          "name": "Agent Manager"
         }
       ]
     },

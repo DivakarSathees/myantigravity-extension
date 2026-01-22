@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+
 let currentDiffEditor: vscode.TextEditor | undefined;
 let pendingChanges: Map<string, any> = new Map();
 
@@ -196,6 +197,12 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 }
             }
         });
+
+        // Get workspace folder path
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const workspacePath = workspaceFolders && workspaceFolders.length > 0 
+            ? workspaceFolders[0].uri.fsPath 
+            : '';
 
         // The HTML for your sidebar with separate chat and terminal views
         webviewView.webview.html = `
@@ -614,6 +621,9 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     let reconnectAttempts = 0;
     let sessionId = null;  // Store session ID for chat history
     let currentSessionTitle = "New Chat";
+    
+    // Workspace path from VS Code (injected from extension)
+    const workspacePath = '${workspacePath.replace(/\\/g, '\\\\')}' || '';
 
     function connectWebSocket() {
         socket = new WebSocket('ws://localhost:8000/ws/logs');
@@ -896,16 +906,17 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         
         if (!text) return;
 
-        addChatMessage('You', text, true);
+            addChatMessage('You', text, true);
         input.value = '';
         input.disabled = true;
 
         try {
             addTerminalOutput('⚙️ Agent processing request...', 'warning');
             
-            // Include session ID in request to maintain chat history
+            // Include session ID and workspace path in request
             const requestBody = { 
-                message: text
+                message: text,
+                workspace_path: workspacePath
             };
             
             if (sessionId) {
