@@ -174,23 +174,42 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'viewDiff') {
-                // Fetch the change data and open diff
                 try {
-                    const response = await fetch(`http://localhost:8000/get-pending-change/${message.changeId}`);
-                    const data: any = await response.json();
-                    
-                    if (data.ok) {
+                    // Check if content was provided directly (from applied changes panel)
+                    if (message.oldContent !== undefined || message.newContent !== undefined) {
                         await showDiffInEditor({
                             change_id: message.changeId,
                             file_path: message.filePath,
-                            diff: data.change.diff,
-                            is_new_file: data.change.is_new_file,
-                            preview: data.change.new_content,
-                            new_content: data.change.new_content,
-                            old_content: data.change.old_content
+                            diff: '',
+                            is_new_file: message.isNewFile || false,
+                            preview: message.newContent,
+                            new_content: message.newContent || '',
+                            old_content: message.oldContent || ''
                         });
                     } else {
-                        vscode.window.showErrorMessage('Failed to load file change');
+                        // Fetch from server (legacy pending changes or applied changes)
+                        let response = await fetch(`http://localhost:8000/applied-change/${message.changeId}`);
+                        let data: any = await response.json();
+                        
+                        // Try pending changes if not found in applied
+                        if (!data.ok) {
+                            response = await fetch(`http://localhost:8000/get-pending-change/${message.changeId}`);
+                            data = await response.json();
+                        }
+                        
+                        if (data.ok) {
+                            await showDiffInEditor({
+                                change_id: message.changeId,
+                                file_path: message.filePath || data.change.file_path,
+                                diff: data.change.diff,
+                                is_new_file: data.change.is_new_file,
+                                preview: data.change.new_content,
+                                new_content: data.change.new_content,
+                                old_content: data.change.old_content
+                            });
+                        } else {
+                            vscode.window.showErrorMessage('Failed to load file change: ' + (data.message || 'Not found'));
+                        }
                     }
                 } catch (error: any) {
                     vscode.window.showErrorMessage('Error viewing diff: ' + error.message);
@@ -286,6 +305,30 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 }
                 .terminal-warning {
                     color: var(--vscode-terminal-ansiBrightYellow);
+                }
+                .file-operation {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 4px 8px;
+                    margin: 2px 0;
+                    border-radius: 3px;
+                    font-size: 12px;
+                }
+                .file-operation.read {
+                    background-color: rgba(100, 150, 255, 0.1);
+                    border-left: 3px solid var(--vscode-terminal-ansiBrightBlue);
+                    color: var(--vscode-terminal-ansiBrightBlue);
+                }
+                .file-operation.write {
+                    background-color: rgba(255, 200, 100, 0.1);
+                    border-left: 3px solid var(--vscode-terminal-ansiBrightYellow);
+                    color: var(--vscode-terminal-ansiBrightYellow);
+                }
+                .file-operation.done {
+                    background-color: rgba(100, 255, 100, 0.1);
+                    border-left: 3px solid var(--vscode-terminal-ansiBrightGreen);
+                    color: var(--vscode-terminal-ansiBrightGreen);
                 }
                 .confirmation-box {
                     background-color: var(--vscode-input-background);
@@ -828,6 +871,153 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     animation: spin 1s linear infinite;
                     display: inline-block;
                 }
+                /* Changed Files Panel Styles */
+                .changed-files-panel {
+                    background-color: var(--vscode-sideBar-background);
+                    border: 1px solid var(--vscode-panel-border);
+                    border-radius: 4px;
+                    margin: 8px 0;
+                    overflow: hidden;
+                }
+                .changed-files-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 10px;
+                    background-color: var(--vscode-sideBarSectionHeader-background);
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                }
+                .changed-files-title {
+                    font-size: 11px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    color: var(--vscode-sideBarSectionHeader-foreground);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .changed-files-count {
+                    background-color: var(--vscode-badge-background);
+                    color: var(--vscode-badge-foreground);
+                    padding: 1px 6px;
+                    border-radius: 10px;
+                    font-size: 10px;
+                }
+                .changed-files-actions {
+                    display: flex;
+                    gap: 4px;
+                }
+                .changed-files-action-btn {
+                    padding: 2px 6px;
+                    font-size: 10px;
+                    border: none;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    background-color: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                }
+                .changed-files-action-btn:hover {
+                    background-color: var(--vscode-button-secondaryHoverBackground);
+                }
+                .changed-files-action-btn.accept-all {
+                    background-color: var(--vscode-testing-iconPassed);
+                    color: #fff;
+                }
+                .changed-files-action-btn.revert-all {
+                    background-color: var(--vscode-testing-iconFailed);
+                    color: #fff;
+                }
+                .changed-files-list {
+                    max-height: 200px;
+                    overflow-y: auto;
+                }
+                .changed-file-item {
+                    display: flex;
+                    align-items: center;
+                    padding: 6px 10px;
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                    font-size: 12px;
+                    gap: 8px;
+                }
+                .changed-file-item:last-child {
+                    border-bottom: none;
+                }
+                .changed-file-item.reverted {
+                    opacity: 0.5;
+                    text-decoration: line-through;
+                }
+                .changed-file-item.accepted {
+                    background-color: rgba(0, 255, 0, 0.05);
+                }
+                .changed-file-icon {
+                    font-size: 14px;
+                    width: 18px;
+                    text-align: center;
+                }
+                .changed-file-icon.new {
+                    color: var(--vscode-testing-iconPassed);
+                }
+                .changed-file-icon.modified {
+                    color: var(--vscode-gitDecoration-modifiedResourceForeground);
+                }
+                .changed-file-name {
+                    flex: 1;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    color: var(--vscode-foreground);
+                }
+                .changed-file-status {
+                    font-size: 10px;
+                    padding: 1px 4px;
+                    border-radius: 3px;
+                }
+                .changed-file-status.applied {
+                    background-color: var(--vscode-inputValidation-warningBackground);
+                    color: var(--vscode-inputValidation-warningForeground);
+                }
+                .changed-file-status.accepted {
+                    background-color: var(--vscode-testing-iconPassed);
+                    color: #fff;
+                }
+                .changed-file-status.reverted {
+                    background-color: var(--vscode-testing-iconFailed);
+                    color: #fff;
+                }
+                .changed-file-actions {
+                    display: flex;
+                    gap: 4px;
+                }
+                .changed-file-btn {
+                    padding: 2px 6px;
+                    font-size: 10px;
+                    border: none;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    background-color: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                }
+                .changed-file-btn:hover {
+                    opacity: 0.8;
+                }
+                .changed-file-btn.view {
+                    background-color: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                }
+                .changed-file-btn.accept {
+                    background-color: var(--vscode-testing-iconPassed);
+                    color: #fff;
+                }
+                .changed-file-btn.revert {
+                    background-color: var(--vscode-testing-iconFailed);
+                    color: #fff;
+                }
+                .no-changes-message {
+                    padding: 15px;
+                    text-align: center;
+                    color: var(--vscode-descriptionForeground);
+                    font-size: 12px;
+                }
             </style>
             </head>
             <body>
@@ -864,6 +1054,22 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                         </div>
                         <div id="sessions-list"></div>
                     </div>
+                </div>
+
+                <!-- Changed Files Panel -->
+                <div id="changed-files-panel" class="changed-files-panel" style="display: none;">
+                    <div class="changed-files-header">
+                        <div class="changed-files-title">
+                            📁 Changed Files
+                            <span id="changed-files-count" class="changed-files-count">0</span>
+                        </div>
+                        <div class="changed-files-actions">
+                            <button class="changed-files-action-btn accept-all" onclick="acceptAllChanges()" title="Accept All">✓ All</button>
+                            <button class="changed-files-action-btn revert-all" onclick="revertAllChanges()" title="Revert All">↩ All</button>
+                            <button class="changed-files-action-btn" onclick="clearChangedFiles()" title="Clear List">🗑</button>
+                        </div>
+                    </div>
+                    <div id="changed-files-list" class="changed-files-list"></div>
                 </div>
 
                 <div class="section">
@@ -1156,6 +1362,194 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     // =============================================
     // =============================================
+    // Changed Files Panel Functions
+    // =============================================
+    
+    let sessionChanges = [];  // Track all file changes in session
+    
+    function updateChangedFilesPanel(changes) {
+        console.log('📁 updateChangedFilesPanel called with:', changes);
+        sessionChanges = changes || [];
+        
+        const panel = document.getElementById('changed-files-panel');
+        const list = document.getElementById('changed-files-list');
+        const count = document.getElementById('changed-files-count');
+        
+        if (!panel || !list || !count) {
+            console.error('❌ Changed files panel elements not found!');
+            return;
+        }
+        
+        // Filter to only show applied (not yet accepted/reverted)
+        const activeChanges = sessionChanges.filter(c => c.status === 'applied');
+        const allChanges = sessionChanges;
+        
+        console.log('📊 Total changes:', allChanges.length, 'Active:', activeChanges.length);
+        
+        if (allChanges.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+        
+        panel.style.display = 'block';
+        count.textContent = activeChanges.length.toString();
+        
+        list.innerHTML = allChanges.map(function(change) {
+            const isNew = change.is_new_file;
+            const iconClass = isNew ? 'new' : 'modified';
+            const icon = isNew ? '✚' : '✎';
+            const statusClass = change.status;
+            const statusText = change.status === 'applied' ? 'pending' : change.status;
+            
+            const isActive = change.status === 'applied';
+            const itemClass = 'changed-file-item' + (change.status === 'reverted' ? ' reverted' : '') + (change.status === 'accepted' ? ' accepted' : '');
+            
+            // Safe escape for file paths in attributes
+            const safeFilePath = (change.file_path || '').replace(/"/g, '&quot;');
+            const safeFileName = (change.file_name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const safeChangeId = change.change_id || '';
+            
+            let actionsHtml = '';
+            if (isActive) {
+                actionsHtml = '<div class="changed-file-actions">' +
+                    '<button class="changed-file-btn view" onclick="viewFileDiff(\\x27' + safeChangeId + '\\x27)">👁</button>' +
+                    '<button class="changed-file-btn accept" onclick="acceptChange(\\x27' + safeChangeId + '\\x27)">✓</button>' +
+                    '<button class="changed-file-btn revert" onclick="revertChange(\\x27' + safeChangeId + '\\x27)">↩</button>' +
+                '</div>';
+            }
+            
+            return '<div class="' + itemClass + '">' +
+                '<span class="changed-file-icon ' + iconClass + '">' + icon + '</span>' +
+                '<span class="changed-file-name" title="' + safeFilePath + '">' + safeFileName + '</span>' +
+                '<span class="changed-file-status ' + statusClass + '">' + statusText + '</span>' +
+                actionsHtml +
+            '</div>';
+        }).join('');
+        
+        console.log('✅ Changed files panel updated');
+    }
+    
+    async function viewFileDiff(changeId) {
+        try {
+            const response = await fetch('http://localhost:8000/applied-change/' + changeId);
+            const data = await response.json();
+            
+            if (data.ok) {
+                // Post message to extension to open diff
+                vscode.postMessage({
+                    type: 'viewDiff',
+                    changeId: changeId,
+                    filePath: data.change.file_path,
+                    oldContent: data.change.old_content,
+                    newContent: data.change.new_content,
+                    isNewFile: data.change.is_new_file
+                });
+                addTerminalOutput('📄 Opening diff: ' + data.change.file_path, 'output');
+            } else {
+                addTerminalOutput('❌ ' + data.message, 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function acceptChange(changeId) {
+        try {
+            const response = await fetch('http://localhost:8000/accept-change', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ change_id: changeId })
+            });
+            const data = await response.json();
+            
+            if (data.ok) {
+                addTerminalOutput('✅ ' + data.message, 'success');
+            } else {
+                addTerminalOutput('❌ ' + data.message, 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function revertChange(changeId) {
+        try {
+            const response = await fetch('http://localhost:8000/revert-change', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ change_id: changeId })
+            });
+            const data = await response.json();
+            
+            if (data.ok) {
+                addTerminalOutput('↩️ ' + data.message, 'warning');
+            } else {
+                addTerminalOutput('❌ ' + data.message, 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function acceptAllChanges() {
+        try {
+            const response = await fetch('http://localhost:8000/accept-all-changes', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.ok) {
+                addTerminalOutput('✅ ' + data.message, 'success');
+            } else {
+                addTerminalOutput('❌ ' + data.message, 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function revertAllChanges() {
+        try {
+            const response = await fetch('http://localhost:8000/revert-all-changes', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.ok) {
+                addTerminalOutput('↩️ ' + data.message, 'warning');
+                if (data.errors && data.errors.length > 0) {
+                    addTerminalOutput('⚠️ Errors: ' + data.errors.join(', '), 'error');
+                }
+            } else {
+                addTerminalOutput('❌ ' + data.message, 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function clearChangedFiles() {
+        try {
+            await fetch('http://localhost:8000/clear-session-changes', {
+                method: 'POST'
+            });
+            sessionChanges = [];
+            updateChangedFilesPanel([]);
+            addTerminalOutput('🗑️ Cleared changed files list', 'output');
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Make functions global
+    window.viewFileDiff = viewFileDiff;
+    window.acceptChange = acceptChange;
+    window.revertChange = revertChange;
+    window.acceptAllChanges = acceptAllChanges;
+    window.revertAllChanges = revertAllChanges;
+    window.clearChangedFiles = clearChangedFiles;
+    
+    // =============================================
     // Progress Panel Functions
     // =============================================
     
@@ -1305,7 +1699,24 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         statusDiv.className = 'status status-connected';
         reconnectAttempts = 0;
         addTerminalOutput('✅ Agent terminal connected', 'success');
+        
+        // Fetch any existing session changes
+        fetchSessionChanges();
     };
+    
+    // Fetch existing session changes from server
+    async function fetchSessionChanges() {
+        try {
+            const response = await fetch('http://localhost:8000/session-changes');
+            const data = await response.json();
+            if (data.ok && data.changes && data.changes.length > 0) {
+                console.log('📂 Loaded existing session changes:', data.changes.length);
+                updateChangedFilesPanel(data.changes);
+            }
+        } catch (error) {
+            console.log('Could not fetch session changes:', error);
+        }
+    }
 
     socket.onerror = (e) => {
         console.error('❌ WebSocket error', e);
@@ -1347,6 +1758,15 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     addTerminalOutput(content, 'error');
                 } else if (content.startsWith('⚠️')) {
                     addTerminalOutput(content, 'warning');
+                } else if (content.startsWith('📖 Reading:') || content.startsWith('✓ Read:')) {
+                    // File read operation
+                    addFileOperation(content, 'read');
+                } else if (content.startsWith('✏️ Editing:') || content.startsWith('📄 Creating:')) {
+                    // File write operation starting
+                    addFileOperation(content, 'write');
+                } else if (content.startsWith('✅ Edited:') || content.startsWith('✅ Created:')) {
+                    // File write operation completed
+                    addFileOperation(content, 'done');
                 } else if (content.includes('🤖 Agent:')) {
                     addTerminalOutput(content, 'output');
                 } else if (content.trim() && !content.startsWith('💡')) {
@@ -1388,6 +1808,24 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 // Handle progress updates
                 console.log('📊 Progress update:', data.action, data.tasks);
                 handleProgressUpdate(data);
+            } else if (data.type === 'file_applied') {
+                // Handle applied file changes (new workflow)
+                console.log('📝 FILE_APPLIED received:', data);
+                console.log('   File path:', data.file_path);
+                console.log('   All changes:', data.all_changes);
+                addTerminalOutput('✅ File updated: ' + data.file_path, 'success');
+                
+                // Update the changed files panel
+                if (data.all_changes) {
+                    console.log('🔄 Calling updateChangedFilesPanel with', data.all_changes.length, 'changes');
+                    updateChangedFilesPanel(data.all_changes);
+                } else {
+                    console.warn('⚠️ No all_changes in file_applied message');
+                }
+            } else if (data.type === 'session_changes_update') {
+                // Handle session changes update (after accept/revert)
+                console.log('📁 SESSION_CHANGES_UPDATE received:', data.changes);
+                updateChangedFilesPanel(data.changes);
             } else {
                 console.log('⚠️ Unknown message type:', data.type);
             }
@@ -1419,6 +1857,14 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         const line = document.createElement('div');
         line.className = 'terminal-line terminal-' + type;
         line.textContent = output;
+        terminalContainer.appendChild(line);
+        terminalContainer.scrollTop = terminalContainer.scrollHeight;
+    }
+    
+    function addFileOperation(message, type) {
+        const line = document.createElement('div');
+        line.className = 'file-operation ' + type;
+        line.textContent = message;
         terminalContainer.appendChild(line);
         terminalContainer.scrollTop = terminalContainer.scrollHeight;
     }
