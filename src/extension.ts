@@ -537,9 +537,61 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     background-color: var(--vscode-editor-selectionBackground);
                     color: var(--vscode-editor-foreground);
                 }
+                /* Option buttons for agent questions */
+                .agent-options {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-top: 8px;
+                    padding-top: 8px;
+                    border-top: 1px solid var(--vscode-panel-border);
+                }
+                .option-btn {
+                    padding: 6px 12px;
+                    background-color: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                    border: 1px solid var(--vscode-button-border);
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 11px;
+                    transition: all 0.2s;
+                    text-align: left;
+                    max-width: 100%;
+                }
+                .option-btn:hover {
+                    background-color: var(--vscode-button-secondaryHoverBackground);
+                    transform: translateY(-1px);
+                }
+                .option-btn.primary {
+                    background-color: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                }
+                .option-btn.primary:hover {
+                    background-color: var(--vscode-button-hoverBackground);
+                }
+                .quick-reply-container {
+                    margin-top: 8px;
+                    padding: 8px;
+                    background-color: var(--vscode-input-background);
+                    border-radius: 4px;
+                    border: 1px dashed var(--vscode-panel-border);
+                }
+                .quick-reply-label {
+                    font-size: 10px;
+                    color: var(--vscode-descriptionForeground);
+                    margin-bottom: 6px;
+                    display: block;
+                }
                 .input-container {
                     display: flex;
                     gap: 5px;
+                    position: relative;
+                }
+                .input-wrapper {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    position: relative;
                 }
                 #input {
                     flex: 1;
@@ -548,6 +600,114 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     color: var(--vscode-input-foreground);
                     border: 1px solid var(--vscode-input-border);
                     border-radius: 2px;
+                }
+                /* File mention dropdown styles */
+                .file-picker-dropdown {
+                    position: absolute;
+                    bottom: 100%;
+                    left: 0;
+                    right: 0;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    background-color: var(--vscode-dropdown-background);
+                    border: 1px solid var(--vscode-dropdown-border);
+                    border-radius: 4px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    z-index: 1000;
+                    margin-bottom: 4px;
+                    display: none;
+                }
+                .file-picker-dropdown.visible {
+                    display: block;
+                }
+                .file-picker-header {
+                    padding: 8px;
+                    font-size: 11px;
+                    color: var(--vscode-descriptionForeground);
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .file-picker-search {
+                    width: 100%;
+                    padding: 6px 8px;
+                    background-color: var(--vscode-input-background);
+                    color: var(--vscode-input-foreground);
+                    border: none;
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                    font-size: 12px;
+                }
+                .file-picker-search:focus {
+                    outline: none;
+                    background-color: var(--vscode-inputOption-activeBackground);
+                }
+                .file-picker-item {
+                    padding: 6px 10px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 12px;
+                    transition: background-color 0.1s;
+                }
+                .file-picker-item:hover, .file-picker-item.selected {
+                    background-color: var(--vscode-list-hoverBackground);
+                }
+                .file-picker-item .file-icon {
+                    font-size: 14px;
+                }
+                .file-picker-item .file-path {
+                    color: var(--vscode-descriptionForeground);
+                    font-size: 10px;
+                    margin-left: auto;
+                }
+                .file-picker-empty {
+                    padding: 15px;
+                    text-align: center;
+                    color: var(--vscode-descriptionForeground);
+                    font-size: 12px;
+                }
+                .file-picker-loading {
+                    padding: 15px;
+                    text-align: center;
+                    color: var(--vscode-descriptionForeground);
+                }
+                /* Selected files chips */
+                .selected-files-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 4px;
+                    margin-bottom: 6px;
+                    min-height: 0;
+                }
+                .selected-files-container:empty {
+                    display: none;
+                }
+                .file-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 2px 8px;
+                    background-color: var(--vscode-badge-background);
+                    color: var(--vscode-badge-foreground);
+                    border-radius: 12px;
+                    font-size: 11px;
+                    max-width: 200px;
+                }
+                .file-chip .file-chip-name {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .file-chip .file-chip-remove {
+                    cursor: pointer;
+                    font-size: 14px;
+                    line-height: 1;
+                    opacity: 0.7;
+                }
+                .file-chip .file-chip-remove:hover {
+                    opacity: 1;
                 }
                 button {
                     padding: 6px 12px;
@@ -575,6 +735,99 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     background-color: var(--vscode-testing-iconFailed);
                     color: #fff;
                 }
+                /* Progress Panel Styles */
+                .progress-panel {
+                    background-color: var(--vscode-editor-background);
+                    border: 1px solid var(--vscode-panel-border);
+                    border-radius: 4px;
+                    margin: 8px 0;
+                    padding: 10px;
+                    display: none;
+                }
+                .progress-panel.visible {
+                    display: block;
+                }
+                .progress-header {
+                    font-size: 11px;
+                    font-weight: bold;
+                    color: var(--vscode-foreground);
+                    margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .progress-header .spinner {
+                    width: 12px;
+                    height: 12px;
+                    border: 2px solid var(--vscode-progressBar-background);
+                    border-top: 2px solid var(--vscode-button-background);
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                .progress-tasks {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                }
+                .progress-task {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 8px;
+                    padding: 4px 0;
+                    font-size: 12px;
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                }
+                .progress-task:last-child {
+                    border-bottom: none;
+                }
+                .progress-task-icon {
+                    width: 16px;
+                    height: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+                .progress-task-icon.pending {
+                    color: var(--vscode-descriptionForeground);
+                }
+                .progress-task-icon.in_progress {
+                    color: var(--vscode-button-background);
+                }
+                .progress-task-icon.completed {
+                    color: var(--vscode-testing-iconPassed);
+                }
+                .progress-task-icon.error {
+                    color: var(--vscode-testing-iconFailed);
+                }
+                .progress-task-content {
+                    flex: 1;
+                }
+                .progress-task-name {
+                    color: var(--vscode-foreground);
+                    font-weight: 500;
+                }
+                .progress-task-name.completed {
+                    color: var(--vscode-descriptionForeground);
+                }
+                .progress-task-details {
+                    font-size: 10px;
+                    color: var(--vscode-descriptionForeground);
+                    margin-top: 2px;
+                }
+                .task-mini-spinner {
+                    width: 12px;
+                    height: 12px;
+                    border: 2px solid var(--vscode-panel-border);
+                    border-top: 2px solid var(--vscode-button-background);
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    display: inline-block;
+                }
             </style>
             </head>
             <body>
@@ -589,10 +842,18 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     </div>
                     <div id="session-title" style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 5px; padding: 3px;"></div>
                     <div id="chat"></div>
+                    <div id="selected-files" class="selected-files-container"></div>
                     <div class="input-container">
-                        <input id="input" type="text" placeholder="Ask agent to build..." onkeypress="if(event.key==='Enter') send()">
+                        <div class="input-wrapper">
+                            <div id="file-picker" class="file-picker-dropdown">
+                                <input type="text" class="file-picker-search" id="file-search" placeholder="Search files..." oninput="filterFiles(this.value)">
+                                <div id="file-list"></div>
+                            </div>
+                            <input id="input" type="text" placeholder="Type @ to mention files..." onkeydown="handleInputKeyDown(event)" oninput="handleInputChange(event)">
+                        </div>
                         <button onclick="send()">Send</button>
                     </div>
+                    <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-top: 4px;">💡 Type @ to attach files for context</div>
                 </div>
                 
                 <div id="sessions-modal" class="modal" style="display: none;">
@@ -608,7 +869,31 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 <div class="section">
                     <div class="section-title">Terminal Output</div>
                     <div id="status" class="status status-disconnected">⚪ Connecting...</div>
+                    
+                    <!-- Progress Panel -->
+                    <div id="progress-panel" class="progress-panel">
+                        <div class="progress-header">
+                            <div class="spinner"></div>
+                            <span>Agent Working...</span>
+                        </div>
+                        <ul id="progress-tasks" class="progress-tasks"></ul>
+                    </div>
+                    
                     <div id="terminal"></div>
+                    
+                    <!-- Process controls for interactive input and kill -->
+                    <div id="process-controls" style="display: none; margin-top: 8px; padding: 8px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">🔄 Process running: <span id="process-id-display"></span></span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input id="process-input" type="text" placeholder="Type input for process..." 
+                                   style="flex: 1; padding: 6px; font-size: 12px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 3px;"
+                                   onkeypress="if(event.key==='Enter') sendProcessInput()">
+                            <button onclick="sendProcessInput()" style="padding: 6px 12px; font-size: 11px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer;">Send</button>
+                            <button onclick="killProcess()" style="padding: 6px 12px; font-size: 11px; background: #d9534f; color: white; border: none; border-radius: 3px; cursor: pointer;">🛑 Kill (Ctrl+C)</button>
+                        </div>
+                    </div>
                 </div>
 
                 <script>
@@ -621,9 +906,395 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     let reconnectAttempts = 0;
     let sessionId = null;  // Store session ID for chat history
     let currentSessionTitle = "New Chat";
+    let currentProcessId = null;  // Track running process for input/kill
     
     // Workspace path from VS Code (injected from extension)
     const workspacePath = '${workspacePath.replace(/\\/g, '\\\\')}' || '';
+    
+    // =============================================
+    // @ File Mention Feature
+    // =============================================
+    let selectedFiles = [];  // Array of selected file objects
+    let workspaceFiles = []; // Cached list of workspace files
+    let filePickerVisible = false;
+    let selectedFileIndex = -1;
+    
+    // Get file icon based on extension
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = {
+            'py': '🐍',
+            'js': '📜',
+            'ts': '💠',
+            'tsx': '⚛️',
+            'jsx': '⚛️',
+            'html': '🌐',
+            'css': '🎨',
+            'json': '📋',
+            'md': '📝',
+            'txt': '📄',
+            'yaml': '⚙️',
+            'yml': '⚙️',
+            'sh': '🖥️',
+            'sql': '🗃️',
+            'git': '📦',
+            'env': '🔐',
+            'svg': '🖼️',
+            'png': '🖼️',
+            'jpg': '🖼️',
+            'jpeg': '🖼️'
+        };
+        return icons[ext] || '📄';
+    }
+    
+    // Fetch workspace files from backend
+    async function fetchWorkspaceFiles(search = '') {
+        try {
+            const response = await fetch('http://localhost:8000/list-workspace-files', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    search: search,
+                    workspace_path: workspacePath  // Pass workspace path
+                })
+            });
+            const data = await response.json();
+            if (data.ok) {
+                workspaceFiles = data.files;
+                return data.files;
+            } else {
+                console.error('File list error:', data.message);
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching files:', error);
+            return [];
+        }
+    }
+    
+    // Show file picker dropdown
+    async function showFilePicker() {
+        const picker = document.getElementById('file-picker');
+        const fileList = document.getElementById('file-list');
+        const searchInput = document.getElementById('file-search');
+        
+        filePickerVisible = true;
+        picker.classList.add('visible');
+        
+        // Show loading
+        fileList.innerHTML = '<div class="file-picker-loading">⏳ Loading files...</div>';
+        
+        // Fetch files
+        const files = await fetchWorkspaceFiles();
+        renderFileList(files);
+        
+        // Focus search input
+        setTimeout(() => searchInput.focus(), 50);
+    }
+    
+    // Hide file picker dropdown
+    function hideFilePicker() {
+        const picker = document.getElementById('file-picker');
+        picker.classList.remove('visible');
+        filePickerVisible = false;
+        selectedFileIndex = -1;
+        
+        // Clear search
+        const searchInput = document.getElementById('file-search');
+        if (searchInput) searchInput.value = '';
+    }
+    
+    // Render file list in dropdown
+    function renderFileList(files) {
+        const fileList = document.getElementById('file-list');
+        
+        if (files.length === 0) {
+            fileList.innerHTML = '<div class="file-picker-empty">No files found</div>';
+            return;
+        }
+        
+        // Filter out already selected files
+        const filteredFiles = files.filter(f => 
+            !selectedFiles.some(sf => sf.path === f.path)
+        );
+        
+        if (filteredFiles.length === 0) {
+            fileList.innerHTML = '<div class="file-picker-empty">All matching files already selected</div>';
+            return;
+        }
+        
+        fileList.innerHTML = filteredFiles.map((file, index) => \`
+            <div class="file-picker-item\${index === selectedFileIndex ? ' selected' : ''}" 
+                 data-path="\${file.path}"
+                 data-full-path="\${file.full_path}"
+                 data-name="\${file.name}"
+                 onclick="selectFile(this)">
+                <span class="file-icon">\${getFileIcon(file.name)}</span>
+                <span class="file-name">\${file.name}</span>
+                <span class="file-path">\${file.path}</span>
+            </div>
+        \`).join('');
+    }
+    
+    // Filter files based on search
+    async function filterFiles(search) {
+        const files = await fetchWorkspaceFiles(search);
+        renderFileList(files);
+        selectedFileIndex = -1;
+    }
+    
+    // Select a file from the dropdown
+    function selectFile(element) {
+        const file = {
+            path: element.dataset.path,
+            full_path: element.dataset.fullPath,
+            name: element.dataset.name
+        };
+        
+        // Add to selected files
+        if (!selectedFiles.some(f => f.path === file.path)) {
+            selectedFiles.push(file);
+            updateSelectedFilesDisplay();
+        }
+        
+        // Hide picker and focus input
+        hideFilePicker();
+        
+        // Remove @ from input if present
+        const input = document.getElementById('input');
+        input.value = input.value.replace(/@\\s*$/, '');
+        input.focus();
+    }
+    
+    // Update the display of selected files (chips)
+    function updateSelectedFilesDisplay() {
+        const container = document.getElementById('selected-files');
+        
+        container.innerHTML = selectedFiles.map(file => \`
+            <div class="file-chip" data-path="\${file.path}">
+                <span>\${getFileIcon(file.name)}</span>
+                <span class="file-chip-name">\${file.name}</span>
+                <span class="file-chip-remove" onclick="removeSelectedFile('\${file.path}')">&times;</span>
+            </div>
+        \`).join('');
+    }
+    
+    // Remove a selected file
+    function removeSelectedFile(path) {
+        selectedFiles = selectedFiles.filter(f => f.path !== path);
+        updateSelectedFilesDisplay();
+    }
+    
+    // Handle input keydown for @ detection and navigation
+    function handleInputKeyDown(event) {
+        if (filePickerVisible) {
+            const items = document.querySelectorAll('.file-picker-item');
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                selectedFileIndex = Math.min(selectedFileIndex + 1, items.length - 1);
+                updateFileSelection(items);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                selectedFileIndex = Math.max(selectedFileIndex - 1, 0);
+                updateFileSelection(items);
+            } else if (event.key === 'Enter' && selectedFileIndex >= 0) {
+                event.preventDefault();
+                items[selectedFileIndex].click();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                hideFilePicker();
+                document.getElementById('input').focus();
+            }
+        } else if (event.key === 'Enter') {
+            send();
+        }
+    }
+    
+    // Update visual selection in file list
+    function updateFileSelection(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('selected', index === selectedFileIndex);
+        });
+        
+        // Scroll selected item into view
+        if (selectedFileIndex >= 0 && items[selectedFileIndex]) {
+            items[selectedFileIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+    
+    // Handle input changes for @ detection
+    function handleInputChange(event) {
+        const input = event.target;
+        const value = input.value;
+        const cursorPos = input.selectionStart;
+        
+        // Check if @ is typed at cursor position
+        const textBeforeCursor = value.substring(0, cursorPos);
+        const atMatch = textBeforeCursor.match(/@(\\w*)$/);
+        
+        if (atMatch) {
+            if (!filePickerVisible) {
+                showFilePicker();
+            }
+        } else if (filePickerVisible) {
+            hideFilePicker();
+        }
+    }
+    
+    // Close file picker when clicking outside
+    document.addEventListener('click', function(event) {
+        const picker = document.getElementById('file-picker');
+        const input = document.getElementById('input');
+        
+        if (filePickerVisible && 
+            !picker.contains(event.target) && 
+            event.target !== input) {
+            hideFilePicker();
+        }
+    });
+    
+    // =============================================
+    // =============================================
+    // Progress Panel Functions
+    // =============================================
+    
+    function handleProgressUpdate(data) {
+        const progressPanel = document.getElementById('progress-panel');
+        const progressTasks = document.getElementById('progress-tasks');
+        
+        if (data.action === 'start_session') {
+            // Show progress panel and clear tasks
+            progressPanel.classList.add('visible');
+            progressTasks.innerHTML = '';
+        } else if (data.action === 'end_session') {
+            // Hide progress panel after a short delay
+            setTimeout(function() {
+                progressPanel.classList.remove('visible');
+            }, 1500);
+        } else if (data.action === 'add_task' || data.action === 'update_task') {
+            // Update task list
+            renderProgressTasks(data.tasks || []);
+        }
+    }
+    
+    function renderProgressTasks(tasks) {
+        const progressTasks = document.getElementById('progress-tasks');
+        
+        progressTasks.innerHTML = tasks.map(function(task) {
+            const iconHtml = getTaskIcon(task.status);
+            const nameClass = task.status === 'completed' ? 'progress-task-name completed' : 'progress-task-name';
+            
+            return '<li class="progress-task">' +
+                '<span class="progress-task-icon ' + task.status + '">' + iconHtml + '</span>' +
+                '<div class="progress-task-content">' +
+                    '<div class="' + nameClass + '">' + escapeHtml(task.name) + '</div>' +
+                    (task.details ? '<div class="progress-task-details">' + escapeHtml(task.details) + '</div>' : '') +
+                '</div>' +
+            '</li>';
+        }).join('');
+        
+        // Auto-scroll to show latest task
+        progressTasks.scrollTop = progressTasks.scrollHeight;
+    }
+    
+    function getTaskIcon(status) {
+        switch(status) {
+            case 'pending':
+                return '○';
+            case 'in_progress':
+                return '<div class="task-mini-spinner"></div>';
+            case 'completed':
+                return '✓';
+            case 'error':
+                return '✗';
+            default:
+                return '○';
+        }
+    }
+    
+    // =============================================
+    // Process control functions
+    // =============================================
+    
+    function showProcessControls(processId) {
+        currentProcessId = processId;
+        const controls = document.getElementById('process-controls');
+        const display = document.getElementById('process-id-display');
+        if (controls && display) {
+            display.textContent = processId;
+            controls.style.display = 'block';
+            document.getElementById('process-input').focus();
+        }
+    }
+    
+    function hideProcessControls() {
+        const controls = document.getElementById('process-controls');
+        if (controls) {
+            controls.style.display = 'none';
+        }
+        currentProcessId = null;
+    }
+    
+    async function sendProcessInput() {
+        if (!currentProcessId) {
+            addTerminalOutput('❌ No active process', 'error');
+            return;
+        }
+        
+        const input = document.getElementById('process-input');
+        const inputText = input.value.trim();
+        
+        if (!inputText) {
+            return;
+        }
+        
+        try {
+            addTerminalOutput('📥 Sending: ' + inputText, 'warning');
+            
+            const response = await fetch('http://localhost:8000/send-input/' + currentProcessId, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ input_text: inputText })
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                input.value = '';
+            } else {
+                addTerminalOutput('❌ ' + (data.message || 'Failed to send input'), 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    async function killProcess() {
+        if (!currentProcessId) {
+            addTerminalOutput('❌ No active process to kill', 'error');
+            return;
+        }
+        
+        try {
+            addTerminalOutput('🛑 Terminating process ' + currentProcessId + '...', 'warning');
+            
+            const response = await fetch('http://localhost:8000/kill-process/' + currentProcessId, {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                addTerminalOutput('✅ Process terminated', 'success');
+                hideProcessControls();
+            } else {
+                addTerminalOutput('❌ ' + (data.message || 'Failed to kill process'), 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error: ' + error.message, 'error');
+        }
+    }
 
     function connectWebSocket() {
         socket = new WebSocket('ws://localhost:8000/ws/logs');
@@ -636,15 +1307,15 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         addTerminalOutput('✅ Agent terminal connected', 'success');
     };
 
-        socket.onerror = (e) => {
-            console.error('❌ WebSocket error', e);
+    socket.onerror = (e) => {
+        console.error('❌ WebSocket error', e);
             statusDiv.textContent = '🔴 Connection error';
             statusDiv.className = 'status status-disconnected';
             addTerminalOutput('❌ WebSocket error - make sure server is running on port 8000', 'error');
-        };
+    };
 
-        socket.onclose = () => {
-            console.log('❌ WebSocket closed');
+    socket.onclose = () => {
+        console.log('❌ WebSocket closed');
             statusDiv.textContent = '🔴 Disconnected';
             statusDiv.className = 'status status-disconnected';
             addTerminalOutput('⚠️ Connection closed. Reconnecting...', 'warning');
@@ -654,16 +1325,16 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 reconnectAttempts++;
                 setTimeout(connectWebSocket, 2000);
             }
-        };
+    };
 
     socket.onmessage = (event) => {
         console.log('📨 WebSocket message received:', event.data);
         try {
-            const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
             console.log('📦 Parsed data:', data);
             console.log('🔍 Message type:', data.type);
 
-            if (data.type === 'log') {
+        if (data.type === 'log') {
                 const content = data.content;
                 
                 // Parse different log types for better formatting
@@ -703,6 +1374,20 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     console.error('❌ showFileDiff error:', err);
                     addTerminalOutput('❌ Error showing diff: ' + err.message, 'error');
                 }
+            } else if (data.type === 'process_start') {
+                // Process started - show input controls
+                console.log('🚀 Process started:', data.process_id);
+                addTerminalOutput('🚀 Process started (ID: ' + data.process_id + ')', 'warning');
+                addTerminalOutput('💡 Use the input field below to send input, or click Kill to stop', 'output');
+                showProcessControls(data.process_id);
+            } else if (data.type === 'process_end') {
+                // Process ended - hide input controls
+                console.log('🏁 Process ended:', data.process_id);
+                hideProcessControls();
+            } else if (data.type === 'progress') {
+                // Handle progress updates
+                console.log('📊 Progress update:', data.action, data.tasks);
+                handleProgressUpdate(data);
             } else {
                 console.log('⚠️ Unknown message type:', data.type);
             }
@@ -765,6 +1450,13 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         terminalContainer.appendChild(confirmBox);
         terminalContainer.scrollTop = terminalContainer.scrollHeight;
     }
+
+    // Make file picker functions global for onclick handlers
+    window.selectFile = selectFile;
+    window.removeSelectedFile = removeSelectedFile;
+    window.filterFiles = filterFiles;
+    window.handleInputKeyDown = handleInputKeyDown;
+    window.handleInputChange = handleInputChange;
 
     window.handleConfirmation = function(approved) {
         const confirmBox = terminalContainer.querySelector('.confirmation-box');
@@ -892,13 +1584,100 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         }
     };
 
+    // Parse options from agent response
+    function parseAgentOptions(text) {
+        const options = [];
+        
+        // Pattern 1: Numbered options (1. Option, 2. Option, etc.)
+        const numberedPattern = /^\\s*(?:\\d+[.\\):]|[-•*])\\s*(.+)$/gm;
+        let match;
+        while ((match = numberedPattern.exec(text)) !== null) {
+            const option = match[1].trim();
+            // Skip if it looks like code or a path
+            if (option && !option.startsWith('/') && option.length < 100) {
+                options.push(option);
+            }
+        }
+        
+        // Pattern 2: "yes/no" type questions
+        if (text.toLowerCase().includes('(yes/no)') || 
+            text.toLowerCase().includes('yes or no') ||
+            text.toLowerCase().includes('should i proceed')) {
+            if (!options.includes('Yes') && !options.includes('yes')) {
+                options.push('Yes');
+                options.push('No');
+            }
+        }
+        
+        // Limit to reasonable number
+        return options.slice(0, 6);
+    }
+    
+    // Check if agent is asking a question
+    function isAgentAskingQuestion(text) {
+        const questionIndicators = [
+            '?',
+            'would you like',
+            'do you want',
+            'should i',
+            'which one',
+            'please choose',
+            'please select',
+            'options:',
+            'what would you',
+            'let me know',
+            'tell me which'
+        ];
+        
+        const lowerText = text.toLowerCase();
+        return questionIndicators.some(indicator => lowerText.includes(indicator));
+    }
+    
+    // Send option as user response
+    function sendOptionResponse(option) {
+        const input = document.getElementById('input');
+        input.value = option;
+        send();
+    }
+
     function addChatMessage(sender, text, isUser = false) {
         const msg = document.createElement('div');
         msg.className = 'chat-message ' + (isUser ? 'user-message' : 'agent-message');
-        msg.innerHTML = '<strong>' + sender + ':</strong> ' + text;
+        
+        // For agent messages, check if there are options to display
+        if (!isUser && isAgentAskingQuestion(text)) {
+            const options = parseAgentOptions(text);
+            
+            if (options.length > 0) {
+                // Create message with options buttons
+                const escapedText = escapeHtml(text).replace(/\\n/g, '<br>');
+                let html = '<strong>' + sender + ':</strong> ' + escapedText;
+                html += '<div class="quick-reply-container">';
+                html += '<span class="quick-reply-label">💡 Quick replies:</span>';
+                html += '<div class="agent-options">';
+                
+                options.forEach(function(opt, i) {
+                    const escapedOpt = escapeHtml(opt);
+                    const safeOpt = escapedOpt.replace(/'/g, '&#39;');
+                    const btnClass = i === 0 ? 'option-btn primary' : 'option-btn';
+                    html += '<button class="' + btnClass + '" onclick="sendOptionResponse(\\'' + safeOpt + '\\')">' + escapedOpt + '</button>';
+                });
+                
+                html += '</div></div>';
+                msg.innerHTML = html;
+            } else {
+                msg.innerHTML = '<strong>' + sender + ':</strong> ' + escapeHtml(text).replace(/\\n/g, '<br>');
+            }
+        } else {
+            msg.innerHTML = '<strong>' + sender + ':</strong> ' + escapeHtml(text).replace(/\\n/g, '<br>');
+        }
+        
         chatContainer.appendChild(msg);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+    
+    // Make sendOptionResponse available globally
+    window.sendOptionResponse = sendOptionResponse;
 
     async function send() {
         const input = document.getElementById('input');
@@ -906,7 +1685,60 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         
         if (!text) return;
 
-            addChatMessage('You', text, true);
+        // Build message with file context
+        let messageWithContext = text;
+        
+        // If files are selected, include them in the message
+        if (selectedFiles.length > 0) {
+            const fileContexts = [];
+            
+            // Show that we're loading file contents
+            addTerminalOutput('📂 Reading selected files...', 'warning');
+            
+            for (const file of selectedFiles) {
+                try {
+                    const response = await fetch('http://localhost:8000/read-file-content', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            path: file.path,
+                            workspace_path: workspacePath
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.ok) {
+                        fileContexts.push(\`
+📄 File: \${file.path}
+\\\`\\\`\\\`
+\${data.content}
+\\\`\\\`\\\`
+\`);
+                        addTerminalOutput('✓ Loaded: ' + file.path, 'success');
+                    }
+                } catch (e) {
+                    console.error('Error reading file:', file.path, e);
+                }
+            }
+            
+            if (fileContexts.length > 0) {
+                messageWithContext = \`The user has attached the following files for context:
+\${fileContexts.join('\\n')}
+
+User's question: \${text}\`;
+            }
+        }
+        
+        // Display original message in chat (not the full context)
+        const displayMessage = selectedFiles.length > 0 
+            ? text + ' [📎 ' + selectedFiles.map(f => f.name).join(', ') + ']'
+            : text;
+        
+        addChatMessage('You', displayMessage, true);
+        
+        // Clear selected files
+        selectedFiles = [];
+        updateSelectedFilesDisplay();
+
         input.value = '';
         input.disabled = true;
 
@@ -915,25 +1747,25 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
             
             // Include session ID and workspace path in request
             const requestBody = { 
-                message: text,
+                message: messageWithContext,
                 workspace_path: workspacePath
             };
             
             if (sessionId) {
                 requestBody.session_id = sessionId;
             }
-            
-            const response = await fetch('http://localhost:8000/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+
+        const response = await fetch('http://localhost:8000/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(requestBody)
-            });
+        });
             
             if (!response.ok) {
                 throw new Error('Server error: ' + response.status);
             }
-
-            const data = await response.json();
+        
+        const data = await response.json();
             
             // Store session ID from response
             if (data.session_id) {
@@ -1051,7 +1883,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     async function loadSession(sid) {
         try {
             const response = await fetch(\`http://localhost:8000/session/\${sid}\`);
-            const data = await response.json();
+        const data = await response.json();
             
             if (!data.ok) {
                 addTerminalOutput('❌ Failed to load session', 'error');
