@@ -2,7 +2,6 @@
   "name": "myantigravity",
   "displayName": "MyAntigravity",
   "description": "Agentic IDE powered by Gemini",
-  "icon": "media/icon.svg",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.104.0"
