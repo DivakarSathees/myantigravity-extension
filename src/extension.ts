@@ -15,14 +15,14 @@ export function activate(context: vscode.ExtensionContext) {
     const provider = new AntigravityViewProvider(context.extensionUri);
 
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('antigravity.chatView', provider)
+        vscode.window.registerWebviewViewProvider('neuralstack.chatView', provider)
     );
 
 
 
     // Command to accept file changes
     context.subscriptions.push(
-        vscode.commands.registerCommand('antigravity.acceptChange', async (changeId: string) => {
+        vscode.commands.registerCommand('neuralstack.acceptChange', async (changeId: string) => {
             try {
                 const response = await fetch(`${PROXY_BASE_URL}/approve-file-change`, {
                     method: 'POST',
@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Command to reject file changes
     context.subscriptions.push(
-        vscode.commands.registerCommand('antigravity.rejectChange', async (changeId: string) => {
+        vscode.commands.registerCommand('neuralstack.rejectChange', async (changeId: string) => {
             try {
                 const response = await fetch(`${PROXY_BASE_URL}/approve-file-change`, {
                     method: 'POST',
@@ -121,9 +121,9 @@ async function showDiffInEditor(changeData: any) {
             );
 
             if (result === 'Accept') {
-                await vscode.commands.executeCommand('antigravity.acceptChange', change_id);
+                await vscode.commands.executeCommand('neuralstack.acceptChange', change_id);
             } else if (result === 'Reject') {
-                await vscode.commands.executeCommand('antigravity.rejectChange', change_id);
+                await vscode.commands.executeCommand('neuralstack.rejectChange', change_id);
             }
         } else {
             // For existing files, show diff using untitled documents
@@ -157,9 +157,9 @@ async function showDiffInEditor(changeData: any) {
             );
 
             if (result === 'Accept') {
-                await vscode.commands.executeCommand('antigravity.acceptChange', change_id);
+                await vscode.commands.executeCommand('neuralstack.acceptChange', change_id);
             } else if (result === 'Reject') {
-                await vscode.commands.executeCommand('antigravity.rejectChange', change_id);
+                await vscode.commands.executeCommand('neuralstack.rejectChange', change_id);
             }
         }
     } catch (error: any) {
@@ -1034,7 +1034,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
             </style>
             </head>
             <body>
-                <h3>🚀 MyAntigravity Agent</h3>
+                <h3>🚀 NeuralStack Agent</h3>
                 
                 <div class="section">
                     <div class="section-title">
@@ -1882,7 +1882,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     function addTerminalCommand(command) {
         const line = document.createElement('div');
         line.className = 'terminal-line';
-        line.innerHTML = '<span class="terminal-prompt">agent@antigravity:~$</span> <span class="terminal-command">' + command + '</span>';
+        line.innerHTML = '<span class="terminal-prompt">agent@neuralstack:~$</span> <span class="terminal-command">' + command + '</span>';
         terminalContainer.appendChild(line);
         terminalContainer.scrollTop = terminalContainer.scrollHeight;
     }

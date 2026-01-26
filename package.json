@@ -1,6 +1,6 @@
 {
-  "name": "myantigravity",
-  "displayName": "MyAntigravity",
+  "name": "neuralstack",
+  "displayName": "NeuralStack",
   "description": "Agentic IDE powered by Gemini",
   "version": "0.0.1",
   "engines": {
@@ -15,24 +15,24 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "antigravity-explorer",
-          "title": "MyAntigravity",
+          "id": "neuralstack-explorer",
+          "title": "NeuralStack",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "antigravity-explorer": [
+      "neuralstack-explorer": [
         {
           "type": "webview",
-          "id": "antigravity.chatView",
+          "id": "neuralstack.chatView",
           "name": "Agent Manager"
         }
       ]
     },
     "commands": [
       {
-        "command": "myantigravity.helloWorld",
+        "command": "neuralstack.helloWorld",
         "title": "Hello World"
       }
     ]
