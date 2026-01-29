@@ -761,18 +761,23 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                 .prompt-picker-item .prompt-label { font-weight: 500; }
                 .prompt-picker-item .prompt-desc { color: var(--vscode-descriptionForeground); font-size: 10px; margin-top: 2px; }
                 .prompt-picker-item .prompt-needs-folder { font-size: 10px; color: var(--vscode-badge-foreground); margin-left: auto; }
-                /* Folder picker - in document flow below input row so it is always visible */
+                /* Folder picker - same position/layout as file picker (above input) */
                 .folder-picker-dropdown {
-                    display: none;
-                    margin-top: 6px;
-                    max-height: 220px;
+                    position: absolute;
+                    bottom: 100%;
+                    left: 0;
+                    right: 0;
+                    max-height: 200px;
                     min-height: 80px;
                     overflow-y: auto;
                     overflow-x: hidden;
+                    display: none;
+                    margin-bottom: 4px;
                     background-color: var(--vscode-dropdown-background);
                     border: 1px solid var(--vscode-dropdown-border);
                     border-radius: 4px;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    z-index: 1000;
                 }
                 .folder-picker-dropdown.visible {
                     display: block;
@@ -883,6 +888,42 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     opacity: 0.7;
                 }
                 .file-chip .file-chip-remove:hover {
+                    opacity: 1;
+                }
+                /* Selected prompts chips - same style as files/folders */
+                .selected-prompts-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 4px;
+                    margin-bottom: 6px;
+                    min-height: 0;
+                }
+                .selected-prompts-container:empty {
+                    display: none;
+                }
+                .prompt-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 2px 8px;
+                    background-color: var(--vscode-badge-background);
+                    color: var(--vscode-badge-foreground);
+                    border-radius: 12px;
+                    font-size: 11px;
+                    max-width: 200px;
+                }
+                .prompt-chip .prompt-chip-name {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .prompt-chip .prompt-chip-remove {
+                    cursor: pointer;
+                    font-size: 14px;
+                    line-height: 1;
+                    opacity: 0.7;
+                }
+                .prompt-chip .prompt-chip-remove:hover {
                     opacity: 1;
                 }
                 button {
@@ -1167,6 +1208,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                     <div id="chat"></div>
                     <div id="selected-files" class="selected-files-container"></div>
                     <div id="selected-folders" class="selected-folders-container"></div>
+                    <div id="selected-prompts" class="selected-prompts-container"></div>
                     <div class="input-container">
                         <div class="input-wrapper">
                             <div id="file-picker" class="file-picker-dropdown">
@@ -1174,23 +1216,18 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                                 <div id="file-list"></div>
                             </div>
                             <div id="folder-picker" class="folder-picker-dropdown">
-                                <div class="folder-picker-header">📁 Select workspace folder</div>
+                                <input type="text" class="file-picker-search" id="folder-search" placeholder="Search folders..." oninput="filterFolders(this.value)">
                                 <div id="folder-list"></div>
                             </div>
                             <div id="prompt-picker" class="prompt-picker-dropdown">
-                                <div class="prompt-picker-header">📋 Saved / default prompts</div>
+                                <input type="text" class="file-picker-search" id="prompt-search" placeholder="Search default prompts..." oninput="filterPrompts(this.value)">
                                 <div id="prompt-list"></div>
                             </div>
-                            <input id="input" type="text" placeholder="Type @ for files, / for folders..." onkeydown="handleInputKeyDown(event)" oninput="handleInputChange(event)">
+                            <input id="input" type="text" placeholder="Type @ for files, / for folders, > for default prompts..." onkeydown="handleInputKeyDown(event)" oninput="handleInputChange(event)">
                         </div>
                         <button onclick="send()">Send</button>
                     </div>
-                    <!-- Folder picker in document flow below input so it is always visible when shown -->
-                    <div id="folder-picker" class="folder-picker-dropdown">
-                        <div class="folder-picker-header">📁 Select workspace folder</div>
-                        <div id="folder-list"></div>
-                    </div>
-                    <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-top: 4px;">💡 Type @ to attach files · Type / to select folder</div>
+                    <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-top: 4px;">💡 Type @ for files · Type / for folders · Type &gt; for default prompts</div>
                 </div>
                 
                 <div id="sessions-modal" class="modal" style="display: none;">
@@ -1294,7 +1331,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     let selectedFileIndex = -1;
     
     // =============================================
-    // / Saved Prompts Feature
+    // > Default prompts (Type > to show - same format as @ and /)
     // =============================================
     const PREDEFINED_PROMPTS = [
         { id: 'java-scaffold', label: 'Java scaffolding for selected directory', prompt: 'Make a Java scaffolding for the selected directory: {{folder}}', needsFolder: true },
@@ -1305,7 +1342,9 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     ];
     let promptPickerVisible = false;
     let selectedPromptIndex = 0;
-    let pendingPromptForFolder = null;  // { prompt, placeholder } when waiting for folder pick
+    let filteredPromptsForPicker = [];  // PREDEFINED_PROMPTS filtered by search (same format as file/folder picker)
+    let selectedPrompts = [];  // Array of selected prompt chips: { id, label, prompt, needsFolder }
+    let pendingPromptForFolder = null;  // { prompt, placeholder } when waiting for folder pick (legacy flow)
     let folderPickerVisible = false;
     let selectedFolderIndex = 0;
     let workspaceFoldersList = [];  // Cached list from backend (same workspace as @ files)
@@ -1544,20 +1583,31 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         }
     }
     
-    // Handle input changes for @ and / detection
+    // Handle input changes for >, @ and / detection
     function handleInputChange(event) {
         const input = event.target;
         const value = input.value;
         const cursorPos = input.selectionStart;
         const textBeforeCursor = value.substring(0, cursorPos);
         
-        // Check if / is typed at cursor (folder picker - same as @ for files)
+        // Check if > is typed at cursor (default/saved prompts - same format as @ and /)
+        const gtMatch = textBeforeCursor.match(/\\>(\\w*)$/);
+        if (gtMatch) {
+            if (!promptPickerVisible) {
+                if (filePickerVisible) hideFilePicker();
+                if (folderPickerVisible) hideFolderPicker();
+                showPromptPicker(gtMatch[1] || '');
+            }
+            return;
+        }
+        
+        // Check if / is typed at cursor (folder picker)
         const slashMatch = textBeforeCursor.match(/\\/(\\w*)$/);
         if (slashMatch) {
             if (!folderPickerVisible) {
                 if (filePickerVisible) hideFilePicker();
                 if (promptPickerVisible) hidePromptPicker();
-                showFolderPicker();
+                showFolderPicker(slashMatch[1] || '');
             }
             return;
         }
@@ -1602,56 +1652,117 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     });
     
     // =============================================
-    // / Prompt Picker Functions
+    // > Default / Saved Prompts (same format as @ and /)
     // =============================================
-    function showPromptPicker() {
+    function filterPrompts(search) {
+        var term = (search || '').toLowerCase().trim();
+        if (!term) {
+            filteredPromptsForPicker = PREDEFINED_PROMPTS.slice(0);
+        } else {
+            filteredPromptsForPicker = PREDEFINED_PROMPTS.filter(function(p) {
+                var label = (p.label || '').toLowerCase();
+                var promptText = (p.prompt || '').toLowerCase();
+                return label.indexOf(term) !== -1 || promptText.indexOf(term) !== -1;
+            });
+        }
+        renderPromptList();
+        selectedPromptIndex = 0;
+    }
+    
+    function showPromptPicker(initialSearch) {
         const picker = document.getElementById('prompt-picker');
+        const listEl = document.getElementById('prompt-list');
+        const searchInput = document.getElementById('prompt-search');
+        const input = document.getElementById('input');
+        if (!picker || !listEl) return;
         promptPickerVisible = true;
         picker.classList.add('visible');
-        selectedPromptIndex = 0;
-        renderPromptList();
+        if (searchInput) searchInput.value = initialSearch || '';
+        filterPrompts(initialSearch || '');
+        setTimeout(function() { if (searchInput) searchInput.focus(); }, 50);
     }
     
     function hidePromptPicker() {
         const picker = document.getElementById('prompt-picker');
-        picker.classList.remove('visible');
+        if (picker) picker.classList.remove('visible');
         promptPickerVisible = false;
         selectedPromptIndex = 0;
+        const searchInput = document.getElementById('prompt-search');
+        if (searchInput) searchInput.value = '';
     }
     
     function renderPromptList() {
         const listEl = document.getElementById('prompt-list');
-        listEl.innerHTML = PREDEFINED_PROMPTS.map(function(p, index) {
-            const desc = p.needsFolder ? ' (select folder)' : '';
+        var prompts = filteredPromptsForPicker;  // Always set by showPromptPicker -> filterPrompts
+        if (!prompts || prompts.length === 0) {
+            listEl.innerHTML = '<div class="folder-picker-empty">No default prompts match</div>';
+            return;
+        }
+        listEl.innerHTML = prompts.map(function(p, index) {
             const needsLabel = p.needsFolder ? '<span class="prompt-needs-folder">📁 pick folder</span>' : '';
-            const escapedLabel = (p.label || '').replace(/'/g, '&#39;');
+            const escapedLabel = (p.label || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
             const escapedId = (p.id || '').replace(/'/g, '&#39;');
-            return '<div class="prompt-picker-item' + (index === selectedPromptIndex ? ' selected' : '') + '" data-index="' + index + '" data-id="' + escapedId + '" data-needs-folder="' + (p.needsFolder ? '1' : '0') + '" data-prompt="' + (p.prompt || '').replace(/"/g, '&quot;') + '" onclick="selectPrompt(this)">' +
+            const escapedPrompt = (p.prompt || '').replace(/"/g, '&quot;');
+            const desc = (p.prompt || '').substring(0, 60) + (p.prompt && p.prompt.length > 60 ? '...' : '');
+            return '<div class="prompt-picker-item' + (index === selectedPromptIndex ? ' selected' : '') + '" data-index="' + index + '" data-id="' + escapedId + '" data-needs-folder="' + (p.needsFolder ? '1' : '0') + '" data-prompt="' + escapedPrompt + '" onclick="selectPrompt(this)">' +
                 '<span class="prompt-icon">📋</span>' +
-                '<div><span class="prompt-label">' + escapedLabel + '</span><div class="prompt-desc">' + (p.prompt || '').substring(0, 60) + (p.prompt && p.prompt.length > 60 ? '...' : '') + '</div></div>' +
+                '<div><span class="prompt-label">' + escapedLabel + '</span><div class="prompt-desc">' + desc + '</div></div>' +
                 needsLabel +
             '</div>';
         }).join('');
     }
     
+    // Update the display of selected prompts (chips) - same UI as file/folder chips
+    function updateSelectedPromptsDisplay() {
+        const container = document.getElementById('selected-prompts');
+        if (!container) return;
+        container.innerHTML = selectedPrompts.map(function(p) {
+            const id = (p.id || '').replace(/"/g, '&quot;');
+            const label = escapeHtml(p.label || p.id || '');
+            return '<div class="prompt-chip" data-id="' + id + '">' +
+                '<span>📋</span>' +
+                '<span class="prompt-chip-name">' + label + '</span>' +
+                (p.needsFolder ? '<span class="prompt-chip-needs-folder" title="Pick a folder">📁</span>' : '') +
+                '<span class="prompt-chip-remove" onclick="removeSelectedPromptFromChip(this)">&times;</span>' +
+            '</div>';
+        }).join('');
+    }
+    
+    function removeSelectedPromptFromChip(el) {
+        var id = el.closest('.prompt-chip').dataset.id;
+        if (id) removeSelectedPrompt(id);
+    }
+    
+    function removeSelectedPrompt(id) {
+        selectedPrompts = selectedPrompts.filter(function(p) { return p.id !== id; });
+        updateSelectedPromptsDisplay();
+    }
+    
     function selectPrompt(element) {
         const index = parseInt(element.dataset.index, 10);
-        const promptObj = PREDEFINED_PROMPTS[index];
+        var prompts = filteredPromptsForPicker.length ? filteredPromptsForPicker : PREDEFINED_PROMPTS;
+        const promptObj = prompts[index];
+        if (!promptObj) return;
         const input = document.getElementById('input');
         hidePromptPicker();
-        var textBefore = input.value;
-        var cursorPos = input.selectionStart;
-        var beforeSlash = textBefore.replace(/\\/$/, '');
-        input.value = beforeSlash;
+        var textBefore = input.value || '';
+        // Remove > and any search chars after it (same as @ and /)
+        var beforeTrigger = textBefore.replace(/\\>[\\w]*$/, '');
+        input.value = beforeTrigger;
         input.selectionStart = input.selectionEnd = input.value.length;
-        // showFolderPicker();
-        if (promptObj.needsFolder) {
-            pendingPromptForFolder = { prompt: promptObj.prompt, placeholder: '{{folder}}' };
-            showFolderPicker();
-        } else {
-            input.value = (input.value ? input.value + ' ' : '') + promptObj.prompt;
-            input.focus();
+        // Add prompt as chip (same as files/folders)
+        var chip = { id: promptObj.id, label: promptObj.label, prompt: promptObj.prompt, needsFolder: !!promptObj.needsFolder };
+        if (!selectedPrompts.some(function(p) { return p.id === chip.id; })) {
+            selectedPrompts.push(chip);
+            updateSelectedPromptsDisplay();
         }
+        if (promptObj.needsFolder) {
+            // Add '/' to input so folder selection opens (same as typing /)
+            input.value = (input.value ? input.value + ' ' : '') + '/';
+            input.selectionStart = input.selectionEnd = input.value.length;
+            showFolderPicker(promptObj.label);
+        }
+        if (input) input.focus();
     }
     
     function applyPendingPromptWithFolder(folderPath) {
@@ -1666,23 +1777,56 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     // Scope path: when user selects a folder for a / prompt, use it as workspace for that request
     let selectedScopePath = null;
     
-    // Folder picker (workspace folders only, like @ file list)
-    async function showFolderPicker() {
-    console.log('showFolderPicker called');
+    // Filter folders based on search (like filterFiles)
+    async function filterFolders(search) {
+        const folders = await fetchWorkspaceFolders(search);
+        renderFolderList(folders);
+        selectedFolderIndex = 0;
+    }
+    
+    // Update the display of selected folders (chips) - same UI as file chips
+    function updateSelectedFoldersDisplay() {
+        const container = document.getElementById('selected-folders');
+        if (!container) return;
+        container.innerHTML = selectedFolders.map(function(folder) {
+            const path = (folder.path || '').replace(/"/g, '&quot;');
+            const name = escapeHtml(folder.name || folder.path || '');
+            return '<div class="folder-chip" data-path="' + path + '">' +
+                '<span>📁</span>' +
+                '<span class="folder-chip-name">' + name + '</span>' +
+                '<span class="folder-chip-remove" onclick="removeSelectedFolderFromChip(this)">&times;</span>' +
+            '</div>';
+        }).join('');
+    }
+    
+    function removeSelectedFolderFromChip(el) {
+        var path = el.closest('.folder-chip').dataset.path;
+        if (path) removeSelectedFolder(path);
+    }
+    
+    // Remove a selected folder
+    function removeSelectedFolder(path) {
+        selectedFolders = selectedFolders.filter(function(f) { return f.path !== path; });
+        updateSelectedFoldersDisplay();
+    }
+    
+    // Folder picker (workspace folders only, same UI as @ file list)
+    async function showFolderPicker(initialSearch) {
         const picker = document.getElementById('folder-picker');
-        console.log('picker:', picker);
+        console.log('picker folder picker:', picker);
+        console.log('initialSearch:', initialSearch);
         const listEl = document.getElementById('folder-list');
+        const searchInput = document.getElementById('folder-search');
         const input = document.getElementById('input');
         if (!picker || !listEl) return;
         folderPickerVisible = true;
         picker.classList.add('visible');
-        listEl.innerHTML = '<div class="folder-picker-loading">⏳ Loading workspace folders...</div>';
-        const folders = await fetchWorkspaceFolders();
-        console.log('folders:', folders);
+        listEl.innerHTML = '<div class="folder-picker-loading">⏳ Loading folders...</div>';
+        if (searchInput) searchInput.value = initialSearch || '';
+        const folders = await fetchWorkspaceFolders(initialSearch || '');
         selectedFolderIndex = 0;
         renderFolderList(folders);
-        picker.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        if (input) input.focus();
+        setTimeout(function() { if (searchInput) searchInput.focus(); }, 50);
     }
     
     function hideFolderPicker() {
@@ -1690,6 +1834,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         if (picker) picker.classList.remove('visible');
         folderPickerVisible = false;
         selectedFolderIndex = 0;
+        const searchInput = document.getElementById('folder-search');
+        if (searchInput) searchInput.value = '';
     }
     
     function escapeHtml(s) {
@@ -1701,35 +1847,54 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         const listEl = document.getElementById('folder-list');
         if (!listEl) return;
         if (!Array.isArray(folders) || folders.length === 0) {
-            listEl.innerHTML = '<div class="folder-picker-empty">No workspace folders found. Open a folder in VS Code.</div>';
+            listEl.innerHTML = '<div class="folder-picker-empty">No folders found</div>';
             return;
         }
-        listEl.innerHTML = folders.map(function(f, index) {
+        // Filter out already selected folders (same as file list)
+        const filtered = folders.filter(function(f) {
+            return !selectedFolders.some(function(sf) { return sf.path === f.path; });
+        });
+        if (filtered.length === 0) {
+            listEl.innerHTML = '<div class="folder-picker-empty">All matching folders already selected</div>';
+            return;
+        }
+        listEl.innerHTML = filtered.map(function(f, index) {
             const pathLabel = f.path === '.' ? '(workspace root)' : f.path;
             const fullPath = f.full_path || f.path || '';
-            const escapedPath = escapeHtml(fullPath);
             const escapedPathAttr = fullPath.replace(/"/g, '&quot;');
             const escapedName = escapeHtml(f.name || pathLabel);
             const escapedPathLabel = escapeHtml(pathLabel);
-            return '<div class="folder-picker-item' + (index === selectedFolderIndex ? ' selected' : '') + '" data-full-path="' + escapedPathAttr + '" data-path="' + (f.path || '').replace(/"/g, '&quot;') + '" onclick="selectFolder(this)">' +
-                '<span>📁</span><span>' + escapedName + '</span><span class="folder-path">' + escapedPathLabel + '</span></div>';
+            const pathAttr = (f.path || '').replace(/"/g, '&quot;');
+            return '<div class="folder-picker-item' + (index === selectedFolderIndex ? ' selected' : '') + '" data-full-path="' + escapedPathAttr + '" data-path="' + pathAttr + '" data-name="' + escapedName + '" onclick="selectFolder(this)">' +
+                '<span class="file-icon">📁</span><span class="file-name">' + escapedName + '</span><span class="file-path">' + escapedPathLabel + '</span></div>';
         }).join('');
     }
     
     function selectFolder(element) {
+        const path = element.dataset.path;
         const fullPath = element.dataset.fullPath;
+        const name = element.dataset.name || element.getAttribute('data-name') || path || fullPath;
         const input = document.getElementById('input');
         hideFolderPicker();
         if (pendingPromptForFolder && fullPath) {
             applyPendingPromptWithFolder(fullPath);
-        } else if (fullPath) {
-            selectedScopePath = fullPath;
-            var textBefore = input.value || '';
-            var beforeSlash = textBefore.replace(/\\/$/, '');
-            input.value = (beforeSlash ? beforeSlash + ' ' : '') + fullPath;
-            input.focus();
+            pendingPromptForFolder = null;
+        } else {
+            // Add to selected folders and show as chip (same as file selection)
+            var folder = { path: path, full_path: fullPath, name: name };
+            if (!selectedFolders.some(function(f) { return f.path === path; })) {
+                selectedFolders.push(folder);
+                updateSelectedFoldersDisplay();
+            }
+            // Remove / from input if present
+            if (input) {
+                input.value = (input.value || '').replace(/\\/$/, '');
+                input.focus();
+            }
         }
-        if (input) input.focus();
+        // Clear folder search
+        var folderSearch = document.getElementById('folder-search');
+        if (folderSearch) folderSearch.value = '';
     }
     
     // When folder picker is visible, capture keydown on document so arrows/Enter work even if input lost focus (e.g. after clicking a prompt)
@@ -2609,9 +2774,9 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         const input = document.getElementById('input');
         const text = input.value.trim();
         
-        if (!text) return;
+        if (!text && selectedPrompts.length === 0) return;
 
-        // Build message with file context
+        // Build message with file context and selected prompts
         let messageWithContext = text;
         
         // If files are selected, include them in the message
@@ -2655,30 +2820,51 @@ User's question: \${text}\`;
             }
         }
         
-        // Display original message in chat (not the full context)
-        const displayMessage = selectedFiles.length > 0 
-            ? text + ' [📎 ' + selectedFiles.map(f => f.name).join(', ') + ']'
-            : text;
+        // If prompts are selected, resolve {{folder}} and prepend to message
+        if (selectedPrompts.length > 0) {
+            const folderPath = selectedFolders.length > 0 ? selectedFolders[0].full_path : '';
+            const resolvedPrompts = selectedPrompts.map(function(p) {
+                var t = p.prompt;
+                if (p.needsFolder && folderPath) t = t.replace(/\\{\\{folder\\}\\}/g, folderPath);
+                return t;
+            });
+            const promptContext = 'The user has selected the following prompts:\\n\\n' + resolvedPrompts.join('\\n\\n');
+            messageWithContext = promptContext + (messageWithContext ? '\\n\\nUser\\'s question: ' + messageWithContext : '');
+        }
+        
+        // Display original message in chat (files, folders, and prompts as chips)
+        let displayMessage = text;
+        if (selectedFiles.length > 0 || selectedFolders.length > 0 || selectedPrompts.length > 0) {
+            const filePart = selectedFiles.length > 0 ? ' [📎 ' + selectedFiles.map(f => f.name).join(', ') + ']' : '';
+            const folderPart = selectedFolders.length > 0 ? ' [📁 ' + selectedFolders.map(f => f.name).join(', ') + ']' : '';
+            const promptPart = selectedPrompts.length > 0 ? ' [📋 ' + selectedPrompts.map(p => p.label).join(', ') + ']' : '';
+            displayMessage = text + filePart + folderPart + promptPart;
+        }
         
         addChatMessage('You', displayMessage, true);
         
-        // Clear selected files
+        // Scope for this request (first selected folder or folder from / prompt)
+        const scopePath = selectedScopePath || (selectedFolders.length > 0 ? selectedFolders[0].full_path : null);
+        
+        // Clear selected files, folders, and prompts
         selectedFiles = [];
         updateSelectedFilesDisplay();
+        selectedFolders = [];
+        updateSelectedFoldersDisplay();
+        selectedPrompts = [];
+        updateSelectedPromptsDisplay();
 
         input.value = '';
         input.disabled = true;
 
         try {
             addTerminalOutput('⚙️ Agent processing request...', 'warning');
-            
-            // Include session ID, workspace path, and optional scope (folder selected for / prompt)
             const requestBody = { 
                 message: messageWithContext,
-                workspace_path: selectedScopePath || workspacePath
+                workspace_path: scopePath || workspacePath
             };
-            if (selectedScopePath) {
-                requestBody.scope_path = selectedScopePath;
+            if (scopePath) {
+                requestBody.scope_path = scopePath;
             }
             if (sessionId) {
                 requestBody.session_id = sessionId;
