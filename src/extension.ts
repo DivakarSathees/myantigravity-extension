@@ -1334,6 +1334,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     // > Default prompts (Type > to show - same format as @ and /)
     // =============================================
     const PREDEFINED_PROMPTS = [
+        { id: 'create-scaffolding', label: 'Create scaffolding (empty solution + run.sh from templates)', prompt: 'Create scaffolding for the selected project using the workspace sample templates. First look for template structure in this workspace under folders like templates/scaffolding or scaffolding-templates (or similar). Read those templates (empty solution structure and run.sh files), then create the same scaffolding in the target folder: empty solution layout and run.sh files based on the templates. Target folder: {{folder}}', needsFolder: true },
         { id: 'java-scaffold', label: 'Java scaffolding for selected directory', prompt: 'Make a Java scaffolding for the selected directory: {{folder}}', needsFolder: true },
         { id: 'scenario-md', label: 'Scenario-based problem description (MD)', prompt: 'Create a scenario-based problem description for this selected project/folder in an md file. Target folder: {{folder}}', needsFolder: true },
         { id: 'analyze-project', label: 'Analyze this project', prompt: 'Analyze the project structure and give a brief overview of technologies, entry points, and suggestions.', needsFolder: false },
