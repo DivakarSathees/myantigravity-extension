@@ -35,7 +35,17 @@
         "command": "neuralstack.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "NeuralStack",
+      "properties": {
+        "neuralstack.proxyBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Backend base URL (leave empty to use webview proxy)"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
