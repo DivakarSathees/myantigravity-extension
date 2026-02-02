@@ -4,13 +4,13 @@ const PROXY_PORT = 8000;
 
 // Store the proxy base URL received from the webview
 // This will be set by the webview when it loads (e.g., "http://localhost:14122/proxy/8000")
-// let PROXY_BASE_URL = `http://localhost:${PROXY_PORT}`; // Default fallback
-function getProxyBaseUrl(): string {
-    const cfg = vscode.workspace.getConfiguration('neuralstack');
-    return cfg.get<string>('proxyBaseUrl') || '';
-}
+let PROXY_BASE_URL = `http://localhost:${PROXY_PORT}`; // Default fallback
+// function getProxyBaseUrl(): string {
+//     const cfg = vscode.workspace.getConfiguration('neuralstack');
+//     return cfg.get<string>('proxyBaseUrl') || '';
+// }
 
-let PROXY_BASE_URL = getProxyBaseUrl();
+// let PROXY_BASE_URL = getProxyBaseUrl();
 
 let currentDiffEditor: vscode.TextEditor | undefined;
 let pendingChanges: Map<string, any> = new Map();
@@ -2338,8 +2338,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     }
 
     function connectWebSocket() {
-        socket = new WebSocket(WS_BASE + '/ws/logs');
-        // socket = new WebSocket('ws://localhost:8000' + '/ws/logs');
+        // socket = new WebSocket(WS_BASE + '/ws/logs');
+        socket = new WebSocket('ws://localhost:8000' + '/ws/logs');
 
     socket.onopen = () => {
         console.log('✅ WebSocket connected');
