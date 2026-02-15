@@ -2,7 +2,7 @@
   "name": "neuralstack",
   "displayName": "NeuralStack",
   "description": "Agentic IDE powered by Gemini",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.104.0"
   },
