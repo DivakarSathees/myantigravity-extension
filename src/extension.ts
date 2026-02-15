@@ -1231,7 +1231,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
                             </div>
                             <input id="input" type="text" placeholder="Type @ for files, / for folders, > for default prompts..." onkeydown="handleInputKeyDown(event)" oninput="handleInputChange(event)">
                         </div>
-                        <button onclick="send()">Send</button>
+                        <button onclick="send()" id="send-btn">Send</button>
+                        <button type="button" id="stop-agent-btn" onclick="stopAgent()" style="display: none; padding: 6px 12px; font-size: 12px; background: #d9534f; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Stop the running agent">⏹ Stop</button>
                     </div>
                     <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-top: 4px;">💡 Type @ for files · Type / for folders · Type &gt; for default prompts</div>
                 </div>
@@ -1322,6 +1323,7 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     let socket = null;
     let reconnectAttempts = 0;
     let sessionId = null;  // Store session ID for chat history
+    let agentRequestInProgress = false;  // True while /chat request is in flight (show Stop button)
     let currentSessionTitle = "New Chat";
     let currentProcessId = null;  // Track running process for input/kill
     
@@ -2863,6 +2865,11 @@ User's question: \${text}\`;
 
         input.value = '';
         input.disabled = true;
+        agentRequestInProgress = true;
+        const stopBtn = document.getElementById('stop-agent-btn');
+        const sendBtn = document.getElementById('send-btn');
+        if (stopBtn) stopBtn.style.display = '';
+        if (sendBtn) sendBtn.style.display = 'none';
 
         try {
             addTerminalOutput('⚙️ Agent processing request...', 'warning');
@@ -2928,11 +2935,39 @@ User's question: \${text}\`;
             addChatMessage('System', 'Error: ' + error.message, false);
             addTerminalOutput('❌ Error: ' + error.message, 'error');
         } finally {
+            agentRequestInProgress = false;
+            const stopBtn = document.getElementById('stop-agent-btn');
+            const sendBtn = document.getElementById('send-btn');
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (sendBtn) sendBtn.style.display = '';
             input.disabled = false;
             input.focus();
         }
     }
-    
+
+    window.stopAgent = async function stopAgent() {
+        const btn = document.getElementById('stop-agent-btn');
+        if (btn) btn.disabled = true;
+        try {
+            const body = sessionId ? { session_id: sessionId } : {};
+            const response = await fetch('http://localhost:8000' + '/stop-agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = response.ok ? await response.json() : {};
+            if (data.ok) {
+                addTerminalOutput('⏹️ Stop requested. Agent will stop after current step.', 'warning');
+            } else {
+                addTerminalOutput('❌ ' + (data.message || 'Failed to request stop'), 'error');
+            }
+        } catch (error) {
+            addTerminalOutput('❌ Error requesting stop: ' + error.message, 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
     function updateSessionTitle() {
         const titleEl = document.getElementById('session-title');
         if (titleEl) {
