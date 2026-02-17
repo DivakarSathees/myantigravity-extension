@@ -2885,17 +2885,28 @@ User's question: \${text}\`;
             }
             selectedScopePath = null;
 
-        // const response = await fetch(PROXY_BASE + '/chat', {
-        const response = await fetch('http://localhost:8000' + '/chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(requestBody)
-        });
+            // Long timeout (30 min) so the request is not dropped while the backend is still running.
+            // "Failed to fetch" often happens when the connection is closed after no data for a while.
+            const CHAT_TIMEOUT_MS = 30 * 60 * 1000;
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(function() {
+                abortController.abort();
+            }, CHAT_TIMEOUT_MS);
+
+            // const response = await fetch(PROXY_BASE + '/chat', {
+            const response = await fetch('http://localhost:8000' + '/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(requestBody),
+                signal: abortController.signal
+            });
+
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error('Server error: ' + response.status);
             }
-        
+
         const data = await response.json();
             
             // Store session ID from response
@@ -2932,8 +2943,15 @@ User's question: \${text}\`;
                 addTerminalOutput('✅ Agent response received', 'success');
             }
         } catch (error) {
-            addChatMessage('System', 'Error: ' + error.message, false);
-            addTerminalOutput('❌ Error: ' + error.message, 'error');
+            const msg = error && error.message ? error.message : String(error);
+            const isConnectionLost = msg === 'Failed to fetch' || msg.indexOf('aborted') !== -1 || msg.indexOf('network') !== -1;
+            if (isConnectionLost) {
+                addChatMessage('System', 'Connection lost or timed out. The backend may still be running — check Terminal Output for logs. You can send a new message when ready.', false);
+                addTerminalOutput('⚠️ Connection lost. Backend may still be running. Check logs above; you can send a new message.', 'warning');
+            } else {
+                addChatMessage('System', 'Error: ' + msg, false);
+                addTerminalOutput('❌ Error: ' + msg, 'error');
+            }
         } finally {
             agentRequestInProgress = false;
             const stopBtn = document.getElementById('stop-agent-btn');
