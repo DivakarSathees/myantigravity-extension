@@ -1392,8 +1392,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     // Fetch workspace files from backend
     async function fetchWorkspaceFiles(search = '') {
         try {
-            // const response = await fetch('http://localhost:8000' + '/list-workspace-files', {
-            const response = await fetch(PROXY_BASE + '/list-workspace-files', {
+            const response = await fetch('http://localhost:8000' + '/list-workspace-files', {
+            // const response = await fetch(PROXY_BASE + '/list-workspace-files', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ 
@@ -1419,8 +1419,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     async function fetchWorkspaceFolders(search) {
         try {
             const base = (typeof PROXY_BASE !== 'undefined' && PROXY_BASE) ? PROXY_BASE : ('http://localhost:8000');
-            const response = await fetch(base + '/list-workspace-folders', {
-            // const response = await fetch('http://localhost:8000' + '/list-workspace-folders', {
+            // const response = await fetch(base + '/list-workspace-folders', {
+            const response = await fetch('http://localhost:8000' + '/list-workspace-folders', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ search: search || '', workspace_path: workspacePath })
@@ -2073,8 +2073,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function viewFileDiff(changeId) {
         try {
-            const response = await fetch(PROXY_BASE + '/applied-change/' + changeId);
-            // const response = await fetch('http://localhost:8000' + '/applied-change/' + changeId);
+            // const response = await fetch(PROXY_BASE + '/applied-change/' + changeId);
+            const response = await fetch('http://localhost:8000' + '/applied-change/' + changeId);
             const data = await response.json();
             
             if (data.ok) {
@@ -2098,8 +2098,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function acceptChange(changeId) {
         try {
-            const response = await fetch(PROXY_BASE + '/accept-change', {
-            // const response = await fetch('http://localhost:8000' + '/accept-change', {
+            // const response = await fetch(PROXY_BASE + '/accept-change', {
+            const response = await fetch('http://localhost:8000' + '/accept-change', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ change_id: changeId })
@@ -2118,8 +2118,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function revertChange(changeId) {
         try {
-            const response = await fetch(PROXY_BASE + '/revert-change', {
-            // const response = await fetch('http://localhost:8000' + '/revert-change', {
+            // const response = await fetch(PROXY_BASE + '/revert-change', {
+            const response = await fetch('http://localhost:8000' + '/revert-change', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ change_id: changeId })
@@ -2138,8 +2138,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function acceptAllChanges() {
         try {
-            const response = await fetch(PROXY_BASE + '/accept-all-changes', {
-            // const response = await fetch('http://localhost:8000' + '/accept-all-changes', {
+            // const response = await fetch(PROXY_BASE + '/accept-all-changes', {
+            const response = await fetch('http://localhost:8000' + '/accept-all-changes', {
                 method: 'POST'
             });
             const data = await response.json();
@@ -2156,8 +2156,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function revertAllChanges() {
         try {
-            const response = await fetch(PROXY_BASE + '/revert-all-changes', {
-            // const response = await fetch('http://localhost:8000' + '/revert-all-changes', {
+            // const response = await fetch(PROXY_BASE + '/revert-all-changes', {
+            const response = await fetch('http://localhost:8000' + '/revert-all-changes', {
                 method: 'POST'
             });
             const data = await response.json();
@@ -2177,8 +2177,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     
     async function clearChangedFiles() {
         try {
-            await fetch(PROXY_BASE + '/clear-session-changes', {
-            // await fetch('http://localhost:8000' + '/clear-session-changes', {
+            // await fetch(PROXY_BASE + '/clear-session-changes', {
+            await fetch('http://localhost:8000' + '/clear-session-changes', {
                 method: 'POST'
             });
             sessionChanges = [];
@@ -2304,8 +2304,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         try {
             addTerminalOutput('📥 Sending: ' + inputText, 'warning');
             
-            const response = await fetch(PROXY_BASE + '/send-input/' + currentProcessId, {
-            // const response = await fetch('http://localhost:8000' + '/send-input/' + currentProcessId, {
+            // const response = await fetch(PROXY_BASE + '/send-input/' + currentProcessId, {
+            const response = await fetch('http://localhost:8000' + '/send-input/' + currentProcessId, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ input_text: inputText })
@@ -2332,8 +2332,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         try {
             addTerminalOutput('🛑 Terminating process ' + currentProcessId + '...', 'warning');
             
-            const response = await fetch(PROXY_BASE + '/kill-process/' + currentProcessId, {
-            // const response = await fetch('http://localhost:8000' + '/kill-process/' + currentProcessId, {
+            // const response = await fetch(PROXY_BASE + '/kill-process/' + currentProcessId, {
+            const response = await fetch('http://localhost:8000' + '/kill-process/' + currentProcessId, {
                 method: 'POST'
             });
             
@@ -2351,8 +2351,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     }
 
     function connectWebSocket() {
-        socket = new WebSocket(WS_BASE + '/ws/logs');
-        // socket = new WebSocket('ws://localhost:8000' + '/ws/logs');
+        // socket = new WebSocket(WS_BASE + '/ws/logs');
+        socket = new WebSocket('ws://localhost:8000' + '/ws/logs');
 
     socket.onopen = () => {
         console.log('✅ WebSocket connected');
@@ -2368,8 +2368,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
     // Fetch existing session changes from server
     async function fetchSessionChanges() {
         try {
-            const response = await fetch(PROXY_BASE + '/session-changes');
-            // const response = await fetch('http://localhost:8000' + '/session-changes');
+            // const response = await fetch(PROXY_BASE + '/session-changes');
+            const response = await fetch('http://localhost:8000' + '/session-changes');
             const data = await response.json();
             if (data.ok && data.changes && data.changes.length > 0) {
                 console.log('📂 Loaded existing session changes:', data.changes.length);
@@ -2669,8 +2669,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
         }
 
         try {
-            const response = await fetch(PROXY_BASE + '/approve-file-change', {
-            // const response = await fetch('http://localhost:8000' + '/approve-file-change', {
+            // const response = await fetch(PROXY_BASE + '/approve-file-change', {
+            const response = await fetch('http://localhost:8000' + '/approve-file-change', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ 
@@ -2808,8 +2808,8 @@ class AntigravityViewProvider implements vscode.WebviewViewProvider {
             
             for (const file of selectedFiles) {
                 try {
-                    const response = await fetch(PROXY_BASE + '/read-file-content', {
-                    // const response = await fetch('http://localhost:8000' + '/read-file-content', {
+                    // const response = await fetch(PROXY_BASE + '/read-file-content', {
+                    const response = await fetch('http://localhost:8000' + '/read-file-content', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
@@ -2904,8 +2904,8 @@ User's question: \${text}\`;
                 abortController.abort();
             }, CHAT_TIMEOUT_MS);
 
-            const response = await fetch(PROXY_BASE + '/chat', {
-            // const response = await fetch('http://localhost:8000' + '/chat', {
+            // const response = await fetch(PROXY_BASE + '/chat', {
+            const response = await fetch('http://localhost:8000' + '/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(requestBody),
@@ -2979,8 +2979,8 @@ User's question: \${text}\`;
         if (btn) btn.disabled = true;
         try {
             const body = sessionId ? { session_id: sessionId } : {};
-            // const response = await fetch('http://localhost:8000' + '/stop-agent', {
-            const response = await fetch(PROXY_BASE + '/stop-agent', {
+            const response = await fetch('http://localhost:8000' + '/stop-agent', {
+            // const response = await fetch(PROXY_BASE + '/stop-agent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -3010,8 +3010,8 @@ User's question: \${text}\`;
         if (!sessionId) return;
         
         try {
-            await fetch(PROXY_BASE + '/clear-history', {
-            // await fetch('http://localhost:8000' + '/clear-history', {
+            // await fetch(PROXY_BASE + '/clear-history', {
+            await fetch('http://localhost:8000' + '/clear-history', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ session_id: sessionId })
@@ -3034,8 +3034,8 @@ User's question: \${text}\`;
 
     async function showSessions() {
         try {
-            const response = await fetch(PROXY_BASE + '/sessions');
-            // const response = await fetch('http://localhost:8000' + '/sessions');
+            // const response = await fetch(PROXY_BASE + '/sessions');
+            const response = await fetch('http://localhost:8000' + '/sessions');
             const data = await response.json();
             
             if (!data.ok) {
@@ -3073,8 +3073,8 @@ User's question: \${text}\`;
 
     async function loadSession(sid) {
         try {
-            const response = await fetch(\`\${PROXY_BASE}/session/\${sid}\`);
-            // const response = await fetch(\`http://localhost:8000/session/\${sid}\`);
+            // const response = await fetch(\`\${PROXY_BASE}/session/\${sid}\`);
+            const response = await fetch(\`http://localhost:8000/session/\${sid}\`);
         const data = await response.json();
             
             if (!data.ok) {
@@ -3106,8 +3106,8 @@ User's question: \${text}\`;
         if (!confirm('Delete this chat session?')) return;
         
         try {
-            await fetch(\`\${PROXY_BASE}/session/\${sid}\`, {
-            // await fetch(\`http://localhost:8000/session/\${sid}\`, {
+            // await fetch(\`\${PROXY_BASE}/session/\${sid}\`, {
+            await fetch(\`http://localhost:8000/session/\${sid}\`, {
                 method: 'DELETE'
             });
             
